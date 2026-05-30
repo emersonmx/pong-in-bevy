@@ -206,7 +206,15 @@ fn bounce_ball_on_paddle(
                     paddle_collision_rect.right + ball_half_size.x
                 };
 
-                ball_velocity.x = -ball_velocity.x;
+                let paddle_center = paddle_collision_rect.center();
+                let ball_center = ball_collision_rect.center();
+                let offset =
+                    (ball_center.y - paddle_center.y) / paddle_collision_rect.half_size().y;
+                let offset = offset.clamp(-1.0, 1.0);
+
+                let new_direction = Vec2::new(-ball_velocity.x.signum(), offset).normalize();
+                ball_velocity.x = new_direction.x * ball_velocity.length();
+                ball_velocity.y = new_direction.y * ball_velocity.length();
             }
         }
     }
