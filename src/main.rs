@@ -1,4 +1,5 @@
 use bevy::{prelude::*, window::WindowResolution};
+use rand::{RngExt, rngs::ChaCha8Rng};
 
 #[derive(Debug, Default, Copy, Clone)]
 struct Aabb {
@@ -68,13 +69,15 @@ struct Ball;
 
 #[derive(Debug, Resource)]
 struct Game {
+    rng: ChaCha8Rng,
     area: Aabb,
 }
 
-fn setup(game: Res<Game>, mut commands: Commands) {
+fn setup(mut game: ResMut<Game>, mut commands: Commands) {
+    let game_area = game.area;
+
     commands.spawn(Camera2d);
 
-    let game_area = game.area;
     commands.spawn((
         Transform::from_translation(game_area.center().extend(0.0)),
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, 600.0)),
@@ -105,10 +108,16 @@ fn setup(game: Res<Game>, mut commands: Commands) {
 
     let ball_size = Vec2::new(10.0, 10.0);
     let ball_position = game_area.center();
+    let ball_dir = Vec3::new(
+        if game.rng.random() { 1.0 } else { -1.0 },
+        game.rng.random(),
+        0.0,
+    )
+    .normalize();
     commands.spawn((
         Ball,
         Speed(100.0),
-        Velocity(Vec3::new(1.0, 1.0, 0.0)),
+        Velocity(ball_dir),
         CollisionRect(Aabb::new(ball_position, ball_size)),
         Transform::from_translation(ball_position.extend(0.0)),
         Sprite::from_color(Color::WHITE, ball_size),
@@ -224,6 +233,7 @@ fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Game {
+            rng: rand::make_rng(),
             area: Aabb::new(Vec2::ZERO, Vec2::new(800.0, 600.0)),
         })
         .add_plugins(DefaultPlugins.set(WindowPlugin {
