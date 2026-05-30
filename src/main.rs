@@ -1,6 +1,6 @@
 use bevy::{prelude::*, window::WindowResolution};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Copy, Clone)]
 struct Aabb {
     left: f32,
     right: f32,
@@ -66,12 +66,15 @@ struct Paddle;
 #[derive(Component)]
 struct Ball;
 
-#[derive(Debug, Resource, Deref)]
-struct GameArea(Aabb);
+#[derive(Debug, Resource)]
+struct Game {
+    area: Aabb,
+}
 
-fn setup(game_area: Res<GameArea>, mut commands: Commands) {
+fn setup(game: Res<Game>, mut commands: Commands) {
     commands.spawn(Camera2d);
 
+    let game_area = game.area;
     commands.spawn((
         Transform::from_translation(game_area.center().extend(0.0)),
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, 600.0)),
@@ -150,10 +153,11 @@ fn move_paddle(
 
 fn move_ball(
     time: Res<Time<Fixed>>,
-    game_area: Res<GameArea>,
+    game: Res<Game>,
     mut query: Query<(&Speed, &CollisionRect, &mut Velocity, &mut Transform), With<Ball>>,
 ) {
     let delta = time.delta().as_secs_f32();
+    let game_area = game.area;
     for (speed, collision_rect, mut velocity, mut transform) in query.iter_mut() {
         transform.translation += velocity.0 * speed.0 * delta;
 
@@ -166,9 +170,10 @@ fn move_ball(
 }
 
 fn clamp_position_to_game_area_top_and_bottom(
-    game_area: Res<GameArea>,
+    game: Res<Game>,
     mut query: Query<(&CollisionRect, &mut Transform)>,
 ) {
+    let game_area = game.area;
     for (collision_rect, mut transform) in query.iter_mut() {
         let pos = transform.translation.truncate();
         let half_size = collision_rect.half_size();
@@ -186,11 +191,11 @@ fn bounce_ball_on_paddle(
         for paddle_collision_rect in paddle_query.iter() {
             if ball_collision_rect.intersects(paddle_collision_rect) {
                 let ball_half_size = ball_collision_rect.half_size();
-                if ball_velocity.x > 0.0 {
-                    transform.translation.x = paddle_collision_rect.left - ball_half_size.x;
+                transform.translation.x = if ball_velocity.x > 0.0 {
+                    paddle_collision_rect.left - ball_half_size.x
                 } else {
-                    transform.translation.x = paddle_collision_rect.right + ball_half_size.x;
-                }
+                    paddle_collision_rect.right + ball_half_size.x
+                };
 
                 ball_velocity.x = -ball_velocity.x;
             }
@@ -218,7 +223,9 @@ fn close_on_esc(
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
-        .insert_resource(GameArea(Aabb::new(Vec2::ZERO, Vec2::new(800.0, 600.0))))
+        .insert_resource(Game {
+            area: Aabb::new(Vec2::ZERO, Vec2::new(800.0, 600.0)),
+        })
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "PONG".to_string(),
