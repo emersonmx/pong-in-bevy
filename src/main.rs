@@ -49,13 +49,19 @@ enum Side {
     Right,
 }
 
-#[derive(Debug, Component, Deref, DerefMut, Default)]
+#[derive(Debug, Default, Component, Deref, DerefMut)]
 struct Direction(Vec2);
 
-#[derive(Debug, Component, Deref, DerefMut, Default)]
+#[derive(Debug, Default, Component, Deref, DerefMut)]
 struct Speed(f32);
 
-#[derive(Debug, Component, Deref, DerefMut, Default)]
+#[derive(Debug, Default, Component, Deref, DerefMut)]
+struct MaxSpeed(f32);
+
+#[derive(Component)]
+struct SpeedStep(f32);
+
+#[derive(Debug, Default, Component, Deref, DerefMut)]
 struct Velocity(Vec3);
 
 #[derive(Debug, Component, Deref, DerefMut)]
@@ -117,6 +123,8 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
     commands.spawn((
         Ball,
         Speed(100.0),
+        SpeedStep(0.1),
+        MaxSpeed(1000.0),
         Velocity(ball_dir),
         CollisionRect(Aabb::new(ball_position, ball_size)),
         Transform::from_translation(ball_position.extend(0.0)),
@@ -228,6 +236,16 @@ fn update_collision_rect(mut query: Query<(&Transform, &mut CollisionRect)>) {
     }
 }
 
+fn update_speed(mut query: Query<(&MaxSpeed, &SpeedStep, &mut Speed)>) {
+    for (max_speed, speed_step, mut speed) in query.iter_mut() {
+        speed.0 += speed_step.0;
+        if speed.0 > max_speed.0 {
+            speed.0 = max_speed.0;
+        }
+        println!("{}", speed.0);
+    }
+}
+
 fn close_on_esc(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut app_exit_messages: MessageWriter<AppExit>,
@@ -262,6 +280,7 @@ fn main() {
                 clamp_position_to_game_area_top_and_bottom,
                 bounce_ball_on_paddle,
                 update_collision_rect,
+                update_speed,
             )
                 .chain(),
         )
