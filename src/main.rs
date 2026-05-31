@@ -46,7 +46,7 @@ impl Aabb {
 #[derive(Debug, Default, Component, Deref, DerefMut)]
 struct Direction(Vec2);
 
-#[derive(Debug, Default, Component, Deref, DerefMut)]
+#[derive(Debug, Default, Component)]
 struct Speed(f32);
 
 #[derive(Debug, Default, Component, Deref, DerefMut)]
