@@ -50,9 +50,6 @@ struct Direction(Vec2);
 struct Speed(f32);
 
 #[derive(Debug, Default, Component, Deref, DerefMut)]
-struct DefaultSpeed(f32);
-
-#[derive(Debug, Default, Component, Deref, DerefMut)]
 struct MaxSpeed(f32);
 
 #[derive(Component)]
@@ -96,6 +93,7 @@ struct Game {
     rng: ChaCha8Rng,
     area: Aabb,
     score: (u32, u32),
+    default_ball_speed: f32,
 }
 
 fn setup(game: Res<Game>, mut commands: Commands) {
@@ -140,12 +138,10 @@ fn setup(game: Res<Game>, mut commands: Commands) {
 
     let ball_size = Vec2::new(10.0, 10.0);
     let ball_position = game.area.center();
-    let speed = 100.0;
     commands.spawn((
         Name::new("ball"),
         Ball,
-        Speed(speed),
-        DefaultSpeed(speed),
+        Speed(game.default_ball_speed),
         SpeedStep(0.1),
         MaxSpeed(1000.0),
         NeedsReset,
@@ -241,15 +237,15 @@ fn wait_ball_launch_timer(
 fn launch_ball(
     mut game: ResMut<Game>,
     mut commands: Commands,
-    mut query: Query<(Entity, &DefaultSpeed, &mut Speed), (With<Ball>, With<NeedsLaunch>)>,
+    mut query: Query<(Entity, &mut Speed), (With<Ball>, With<NeedsLaunch>)>,
 ) {
-    for (entity, default_speed, mut speed) in query.iter_mut() {
+    for (entity, mut speed) in query.iter_mut() {
         let dir_x = if game.rng.random() { 1.0 } else { -1.0 };
         let dir_y = game.rng.random::<f32>() * 2.0 - 1.0;
         let new_dir = Vec3::new(dir_x, dir_y, 0.0).normalize();
 
         commands.entity(entity).insert(Velocity(new_dir));
-        speed.0 = default_speed.0;
+        speed.0 = game.default_ball_speed;
         commands.entity(entity).remove::<NeedsLaunch>();
     }
 }
@@ -395,6 +391,7 @@ fn main() {
             rng: rand::make_rng(),
             area: Aabb::new(Vec2::ZERO, Vec2::new(800.0, 600.0)),
             score: (0, 0),
+            default_ball_speed: 100.0,
         })
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
