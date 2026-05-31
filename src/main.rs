@@ -92,6 +92,7 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
     commands.spawn(Camera2d);
 
     commands.spawn((
+        Name::new("middle line"),
         Transform::from_translation(game_area.center().extend(0.0)),
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, 600.0)),
     ));
@@ -99,6 +100,7 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
     let paddle_size = Vec2::new(20.0, 100.0);
     let left_position = Vec3::new(game_area.left + paddle_size.x, 0.0, 0.0);
     commands.spawn((
+        Name::new("left paddle"),
         Paddle,
         PaddleKeyboardInput {
             up_key: KeyCode::KeyW,
@@ -113,6 +115,7 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
 
     let right_position = Vec3::new(game_area.right - paddle_size.x, 0.0, 0.0);
     commands.spawn((
+        Name::new("right paddle"),
         Paddle,
         PaddleKeyboardInput {
             up_key: KeyCode::ArrowUp,
@@ -135,6 +138,7 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
     .normalize();
     let speed = 100.0;
     commands.spawn((
+        Name::new("ball"),
         Ball,
         Speed(speed),
         DefaultSpeed(speed),
@@ -159,7 +163,7 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
             ..default()
         },))
         .with_children(|parent| {
-            parent.spawn((Text::default(), ScoreText));
+            parent.spawn((Name::new("score"), Text::default(), ScoreText));
         });
 }
 
