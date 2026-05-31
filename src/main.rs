@@ -101,7 +101,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
     commands.spawn((
         Name::new("middle line"),
         Transform::from_translation(game.area.center().extend(0.0)),
-        Sprite::from_color(Color::WHITE, Vec2::new(1.0, 600.0)),
+        Sprite::from_color(Color::WHITE, Vec2::new(1.0, game.area.size().y)),
     ));
 
     let paddle_size = Vec2::new(20.0, 100.0);
