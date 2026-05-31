@@ -65,6 +65,9 @@ struct PaddleKeyboardInput {
 }
 
 #[derive(Component)]
+struct Bot;
+
+#[derive(Component)]
 struct Paddle;
 
 #[derive(Component)]
@@ -121,10 +124,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
     commands.spawn((
         Name::new("right paddle"),
         Paddle,
-        PaddleKeyboardInput {
-            up_key: KeyCode::ArrowUp,
-            down_key: KeyCode::ArrowDown,
-        },
+        Bot,
         Speed(300.0),
         Direction::default(),
         CollisionRect(Aabb::new(right_position.truncate(), paddle_size)),
@@ -174,6 +174,35 @@ fn paddle_input(
         }
         if keyboard_input.pressed(input.down_key) {
             direction.y -= 1.0;
+        }
+    }
+}
+
+fn bot_input(
+    game: Res<Game>,
+    ball_query: Query<&Transform, With<Ball>>,
+    mut paddle_query: Query<(&Transform, &mut Direction), (With<Paddle>, With<Bot>)>,
+) {
+    let area_center = game.area.center();
+    let epsilon = 10.0;
+
+    for ball_transform in ball_query.iter() {
+        let ball_pos = ball_transform.translation.truncate();
+
+        for (paddle_transform, mut direction) in paddle_query.iter_mut() {
+            let paddle_pos = paddle_transform.translation.truncate();
+            let proximity_x = (paddle_pos.x - area_center.x).abs();
+            let close = (ball_pos.x - paddle_pos.x).abs() < proximity_x;
+
+            let target_y = if close { ball_pos.y } else { area_center.y };
+
+            let delta_y = target_y - paddle_pos.y;
+            direction.x = 0.0;
+            direction.y = if delta_y.abs() > epsilon {
+                delta_y.signum()
+            } else {
+                0.0
+            };
         }
     }
 }
@@ -402,6 +431,7 @@ fn main() {
             Update,
             (
                 paddle_input,
+                bot_input,
                 close_on_esc,
                 update_score_text,
                 reset_ball,
