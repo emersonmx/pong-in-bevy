@@ -49,9 +49,6 @@ struct Direction(Vec2);
 #[derive(Debug, Default, Component, Deref, DerefMut)]
 struct Speed(f32);
 
-#[derive(Component)]
-struct SpeedStep(f32);
-
 #[derive(Debug, Default, Component, Deref, DerefMut)]
 struct Velocity(Vec3);
 
@@ -91,6 +88,7 @@ struct Game {
     area: Aabb,
     score: (u32, u32),
     default_ball_speed: f32,
+    ball_speed_step: f32,
     ball_max_speed: f32,
 }
 
@@ -140,7 +138,6 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         Name::new("ball"),
         Ball,
         Speed(game.default_ball_speed),
-        SpeedStep(0.1),
         NeedsReset,
         CollisionRect(Aabb::new(ball_position, ball_size)),
         Transform::from_translation(ball_position.extend(0.0)),
@@ -342,9 +339,9 @@ fn update_collision_rect(mut query: Query<(&Transform, &mut CollisionRect)>) {
     }
 }
 
-fn update_speed(game: Res<Game>, mut query: Query<(&SpeedStep, &mut Speed)>) {
-    for (speed_step, mut speed) in query.iter_mut() {
-        speed.0 += speed_step.0;
+fn update_speed(game: Res<Game>, mut query: Query<&mut Speed>) {
+    for mut speed in query.iter_mut() {
+        speed.0 += game.ball_speed_step;
         if speed.0 > game.ball_max_speed {
             speed.0 = game.ball_max_speed;
         }
@@ -389,6 +386,7 @@ fn main() {
             area: Aabb::new(Vec2::ZERO, Vec2::new(800.0, 600.0)),
             score: (0, 0),
             default_ball_speed: 100.0,
+            ball_speed_step: 0.1,
             ball_max_speed: 1000.0,
         })
         .add_plugins(DefaultPlugins.set(WindowPlugin {
