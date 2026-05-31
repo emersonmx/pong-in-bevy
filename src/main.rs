@@ -89,19 +89,17 @@ struct Game {
     score: (u32, u32),
 }
 
-fn setup(mut game: ResMut<Game>, mut commands: Commands) {
-    let game_area = game.area;
-
+fn setup(game: Res<Game>, mut commands: Commands) {
     commands.spawn(Camera2d);
 
     commands.spawn((
         Name::new("middle line"),
-        Transform::from_translation(game_area.center().extend(0.0)),
+        Transform::from_translation(game.area.center().extend(0.0)),
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, 600.0)),
     ));
 
     let paddle_size = Vec2::new(20.0, 100.0);
-    let left_position = Vec3::new(game_area.left + paddle_size.x, 0.0, 0.0);
+    let left_position = Vec3::new(game.area.left + paddle_size.x, 0.0, 0.0);
     commands.spawn((
         Name::new("left paddle"),
         Paddle,
@@ -116,7 +114,7 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
         Sprite::from_color(Color::WHITE, paddle_size),
     ));
 
-    let right_position = Vec3::new(game_area.right - paddle_size.x, 0.0, 0.0);
+    let right_position = Vec3::new(game.area.right - paddle_size.x, 0.0, 0.0);
     commands.spawn((
         Name::new("right paddle"),
         Paddle,
@@ -132,13 +130,7 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
     ));
 
     let ball_size = Vec2::new(10.0, 10.0);
-    let ball_position = game_area.center();
-    let ball_dir = Vec3::new(
-        if game.rng.random() { 1.0 } else { -1.0 },
-        game.rng.random(),
-        0.0,
-    )
-    .normalize();
+    let ball_position = game.area.center();
     let speed = 100.0;
     commands.spawn((
         Name::new("ball"),
@@ -147,7 +139,6 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
         DefaultSpeed(speed),
         SpeedStep(0.1),
         MaxSpeed(1000.0),
-        Velocity(ball_dir),
         CollisionRect(Aabb::new(ball_position, ball_size)),
         Transform::from_translation(ball_position.extend(0.0)),
         Sprite::from_color(Color::WHITE, ball_size),
@@ -187,6 +178,15 @@ fn paddle_input(
     }
 }
 
+fn close_on_esc(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut app_exit_messages: MessageWriter<AppExit>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Escape) {
+        app_exit_messages.write(AppExit::Success);
+    }
+}
+
 #[allow(clippy::type_complexity)]
 fn update_score_text(
     game: Res<Game>,
@@ -197,6 +197,28 @@ fn update_score_text(
     for (entity, mut text) in query.iter_mut() {
         *text = Text::new(&score);
         commands.entity(entity).remove::<Dirty>();
+    }
+}
+
+#[allow(clippy::type_complexity)]
+fn launch_ball(
+    mut game: ResMut<Game>,
+    mut commands: Commands,
+    mut query: Query<
+        (Entity, &DefaultSpeed, &mut Speed, &mut Transform),
+        (With<Ball>, Without<Velocity>),
+    >,
+) {
+    for (entity, default_speed, mut speed, mut transform) in query.iter_mut() {
+        let center = game.area.center().extend(0.0);
+        transform.translation = center;
+
+        let dir_x = if game.rng.random() { 1.0 } else { -1.0 };
+        let dir_y = game.rng.random::<f32>() * 2.0 - 1.0;
+        let new_dir = Vec3::new(dir_x, dir_y, 0.0).normalize();
+        commands.entity(entity).insert(Velocity(new_dir));
+
+        speed.0 = default_speed.0;
     }
 }
 
@@ -308,10 +330,10 @@ fn check_score(
     mut commands: Commands,
     mut game: ResMut<Game>,
     score_text_query: Query<Entity, With<ScoreText>>,
-    ball_query: Query<&Transform, With<Ball>>,
+    ball_query: Query<(Entity, &Transform), With<Ball>>,
 ) {
     let game_area = game.area;
-    for transform in ball_query.iter() {
+    for (entity, transform) in ball_query.iter() {
         let ball_x = transform.translation.x;
         let ball_out_left = ball_x < game_area.left;
         let ball_out_right = ball_x > game_area.right;
@@ -326,42 +348,11 @@ fn check_score(
             game.score.0 += 1;
         }
 
+        commands.entity(entity).remove::<Velocity>();
+
         for entity in score_text_query.iter() {
             commands.entity(entity).insert(Dirty);
         }
-    }
-}
-
-fn check_score_and_reset_ball(
-    mut game: ResMut<Game>,
-    mut ball_query: Query<(&DefaultSpeed, &mut Transform, &mut Velocity, &mut Speed), With<Ball>>,
-) {
-    let game_area = game.area;
-    for (default_speed, mut transform, mut velocity, mut speed) in ball_query.iter_mut() {
-        let ball_x = transform.translation.x;
-        let ball_out_left = ball_x < game_area.left;
-        let ball_out_right = ball_x > game_area.right;
-
-        if ball_out_left || ball_out_right {
-            let center = game_area.center().extend(0.0);
-            transform.translation = center;
-
-            let dir_x = if game.rng.random() { 1.0 } else { -1.0 };
-            let dir_y = game.rng.random::<f32>() * 2.0 - 1.0;
-            let new_dir = Vec3::new(dir_x, dir_y, 0.0).normalize();
-            velocity.0 = new_dir;
-
-            speed.0 = default_speed.0;
-        }
-    }
-}
-
-fn close_on_esc(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut app_exit_messages: MessageWriter<AppExit>,
-) {
-    if keyboard_input.just_pressed(KeyCode::Escape) {
-        app_exit_messages.write(AppExit::Success);
     }
 }
 
@@ -382,7 +373,10 @@ fn main() {
             ..default()
         }))
         .add_systems(Startup, setup)
-        .add_systems(Update, (paddle_input, close_on_esc, update_score_text))
+        .add_systems(
+            Update,
+            (paddle_input, close_on_esc, update_score_text, launch_ball),
+        )
         .add_systems(
             FixedUpdate,
             (
@@ -393,7 +387,6 @@ fn main() {
                 update_collision_rect,
                 update_speed,
                 check_score,
-                check_score_and_reset_ball,
             )
                 .chain(),
         )
