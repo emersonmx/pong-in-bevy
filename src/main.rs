@@ -244,6 +244,36 @@ fn launch_ball(
     }
 }
 
+fn check_score(
+    mut commands: Commands,
+    mut game: ResMut<Game>,
+    score_text_query: Query<Entity, With<ScoreText>>,
+    ball_query: Query<(Entity, &Transform), With<Ball>>,
+) {
+    let game_area = game.area;
+    for (entity, transform) in ball_query.iter() {
+        let ball_x = transform.translation.x;
+        let ball_out_left = ball_x < game_area.left;
+        let ball_out_right = ball_x > game_area.right;
+        let ball_inside_area = !ball_out_left && !ball_out_right;
+        if ball_inside_area {
+            continue;
+        }
+
+        if ball_out_left {
+            game.score.1 += 1;
+        } else if ball_out_right {
+            game.score.0 += 1;
+        }
+
+        commands.entity(entity).insert(NeedsReset);
+
+        for entity in score_text_query.iter() {
+            commands.entity(entity).insert(Dirty);
+        }
+    }
+}
+
 fn move_paddle(
     time: Res<Time<Fixed>>,
     mut query: Query<(&Speed, &Direction, &mut Transform), With<Paddle>>,
@@ -348,36 +378,6 @@ fn update_speed(game: Res<Game>, mut query: Query<&mut Speed>) {
     }
 }
 
-fn check_score(
-    mut commands: Commands,
-    mut game: ResMut<Game>,
-    score_text_query: Query<Entity, With<ScoreText>>,
-    ball_query: Query<(Entity, &Transform), With<Ball>>,
-) {
-    let game_area = game.area;
-    for (entity, transform) in ball_query.iter() {
-        let ball_x = transform.translation.x;
-        let ball_out_left = ball_x < game_area.left;
-        let ball_out_right = ball_x > game_area.right;
-        let ball_out = ball_out_left || ball_out_right;
-        if !ball_out {
-            continue;
-        }
-
-        if ball_out_left {
-            game.score.1 += 1;
-        } else if ball_out_right {
-            game.score.0 += 1;
-        }
-
-        commands.entity(entity).insert(NeedsReset);
-
-        for entity in score_text_query.iter() {
-            commands.entity(entity).insert(Dirty);
-        }
-    }
-}
-
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
@@ -407,6 +407,7 @@ fn main() {
                 reset_ball,
                 wait_ball_launch_timer,
                 launch_ball,
+                check_score,
             ),
         )
         .add_systems(
@@ -418,7 +419,6 @@ fn main() {
                 bounce_ball_on_paddle,
                 update_collision_rect,
                 update_speed,
-                check_score,
             )
                 .chain(),
         )
