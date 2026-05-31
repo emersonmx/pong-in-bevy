@@ -43,12 +43,6 @@ impl Aabb {
     }
 }
 
-#[derive(Debug, Component)]
-enum Side {
-    Left,
-    Right,
-}
-
 #[derive(Debug, Default, Component, Deref, DerefMut)]
 struct Direction(Vec2);
 
@@ -69,6 +63,12 @@ struct Velocity(Vec3);
 
 #[derive(Debug, Component, Deref, DerefMut)]
 struct CollisionRect(Aabb);
+
+#[derive(Debug, Component)]
+struct PaddleKeyboardInput {
+    up_key: KeyCode,
+    down_key: KeyCode,
+}
 
 #[derive(Component)]
 struct Paddle;
@@ -100,7 +100,10 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
     let left_position = Vec3::new(game_area.left + paddle_size.x, 0.0, 0.0);
     commands.spawn((
         Paddle,
-        Side::Left,
+        PaddleKeyboardInput {
+            up_key: KeyCode::KeyW,
+            down_key: KeyCode::KeyS,
+        },
         Speed(300.0),
         Direction::default(),
         CollisionRect(Aabb::new(left_position.truncate(), paddle_size)),
@@ -111,7 +114,10 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
     let right_position = Vec3::new(game_area.right - paddle_size.x, 0.0, 0.0);
     commands.spawn((
         Paddle,
-        Side::Right,
+        PaddleKeyboardInput {
+            up_key: KeyCode::ArrowUp,
+            down_key: KeyCode::ArrowDown,
+        },
         Speed(300.0),
         Direction::default(),
         CollisionRect(Aabb::new(right_position.truncate(), paddle_size)),
@@ -159,25 +165,16 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
 
 fn paddle_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&Side, &mut Direction), With<Paddle>>,
+    mut query: Query<(&PaddleKeyboardInput, &mut Direction), With<Paddle>>,
 ) {
-    for (side, mut direction) in query.iter_mut() {
-        let up_key = match side {
-            Side::Left => KeyCode::KeyW,
-            Side::Right => KeyCode::ArrowUp,
-        };
-        let down_key = match side {
-            Side::Left => KeyCode::KeyS,
-            Side::Right => KeyCode::ArrowDown,
-        };
-
+    for (input, mut direction) in query.iter_mut() {
         direction.x = 0.0;
         direction.y = 0.0;
 
-        if keyboard_input.pressed(up_key) {
+        if keyboard_input.pressed(input.up_key) {
             direction.y += 1.0;
         }
-        if keyboard_input.pressed(down_key) {
+        if keyboard_input.pressed(input.down_key) {
             direction.y -= 1.0;
         }
     }
