@@ -79,6 +79,9 @@ struct Ball;
 #[derive(Component)]
 struct ScoreText;
 
+#[derive(Component)]
+struct Dirty;
+
 #[derive(Debug, Resource)]
 struct Game {
     rng: ChaCha8Rng,
@@ -163,7 +166,7 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
             ..default()
         },))
         .with_children(|parent| {
-            parent.spawn((Name::new("score"), Text::default(), ScoreText));
+            parent.spawn((Name::new("score"), Text::default(), ScoreText, Dirty));
         });
 }
 
@@ -184,10 +187,16 @@ fn paddle_input(
     }
 }
 
-fn update_score_text(game: Res<Game>, mut query: Query<&mut Text, With<ScoreText>>) {
+#[allow(clippy::type_complexity)]
+fn update_score_text(
+    game: Res<Game>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Text), (With<ScoreText>, With<Dirty>)>,
+) {
     let score = format!("{}   {}", game.score.0, game.score.1);
-    for mut text in query.iter_mut() {
+    for (entity, mut text) in query.iter_mut() {
         *text = Text::new(&score);
+        commands.entity(entity).remove::<Dirty>();
     }
 }
 
@@ -295,6 +304,34 @@ fn update_speed(mut query: Query<(&MaxSpeed, &SpeedStep, &mut Speed)>) {
     }
 }
 
+fn check_score(
+    mut commands: Commands,
+    mut game: ResMut<Game>,
+    score_text_query: Query<Entity, With<ScoreText>>,
+    ball_query: Query<&Transform, With<Ball>>,
+) {
+    let game_area = game.area;
+    for transform in ball_query.iter() {
+        let ball_x = transform.translation.x;
+        let ball_out_left = ball_x < game_area.left;
+        let ball_out_right = ball_x > game_area.right;
+        let ball_out = ball_out_left || ball_out_right;
+        if !ball_out {
+            continue;
+        }
+
+        if ball_out_left {
+            game.score.1 += 1;
+        } else if ball_out_right {
+            game.score.0 += 1;
+        }
+
+        for entity in score_text_query.iter() {
+            commands.entity(entity).insert(Dirty);
+        }
+    }
+}
+
 fn check_score_and_reset_ball(
     mut game: ResMut<Game>,
     mut ball_query: Query<(&DefaultSpeed, &mut Transform, &mut Velocity, &mut Speed), With<Ball>>,
@@ -306,12 +343,6 @@ fn check_score_and_reset_ball(
         let ball_out_right = ball_x > game_area.right;
 
         if ball_out_left || ball_out_right {
-            if ball_out_left {
-                game.score.1 += 1;
-            } else if ball_out_right {
-                game.score.0 += 1;
-            }
-
             let center = game_area.center().extend(0.0);
             transform.translation = center;
 
@@ -361,6 +392,7 @@ fn main() {
                 bounce_ball_on_paddle,
                 update_collision_rect,
                 update_speed,
+                check_score,
                 check_score_and_reset_ball,
             )
                 .chain(),
