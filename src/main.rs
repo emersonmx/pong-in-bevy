@@ -64,6 +64,9 @@ struct Velocity(Vec3);
 #[derive(Debug, Component, Deref, DerefMut)]
 struct CollisionRect(Aabb);
 
+#[derive(Debug, Default, Component, Deref, DerefMut)]
+struct LaunchTimer(Timer);
+
 #[derive(Debug, Component)]
 struct PaddleKeyboardInput {
     up_key: KeyCode,
@@ -78,6 +81,12 @@ struct Ball;
 
 #[derive(Component)]
 struct ScoreText;
+
+#[derive(Component)]
+struct NeedsReset;
+
+#[derive(Component)]
+struct NeedsLaunch;
 
 #[derive(Component)]
 struct Dirty;
@@ -139,6 +148,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         DefaultSpeed(speed),
         SpeedStep(0.1),
         MaxSpeed(1000.0),
+        NeedsReset,
         CollisionRect(Aabb::new(ball_position, ball_size)),
         Transform::from_translation(ball_position.extend(0.0)),
         Sprite::from_color(Color::WHITE, ball_size),
@@ -187,7 +197,6 @@ fn close_on_esc(
     }
 }
 
-#[allow(clippy::type_complexity)]
 fn update_score_text(
     game: Res<Game>,
     mut commands: Commands,
@@ -200,25 +209,48 @@ fn update_score_text(
     }
 }
 
-#[allow(clippy::type_complexity)]
+fn reset_ball(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Transform), (With<Ball>, With<NeedsReset>)>,
+    game: Res<Game>,
+) {
+    for (entity, mut transform) in query.iter_mut() {
+        transform.translation = game.area.center().extend(0.0);
+
+        commands.entity(entity).remove::<Velocity>();
+        commands
+            .entity(entity)
+            .insert(LaunchTimer(Timer::from_seconds(1.0, TimerMode::Once)));
+        commands.entity(entity).remove::<NeedsReset>();
+    }
+}
+
+fn wait_ball_launch_timer(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut LaunchTimer), With<Ball>>,
+) {
+    for (entity, mut timer) in query.iter_mut() {
+        if timer.tick(time.delta()).just_finished() {
+            commands.entity(entity).insert(NeedsLaunch);
+            commands.entity(entity).remove::<LaunchTimer>();
+        }
+    }
+}
+
 fn launch_ball(
     mut game: ResMut<Game>,
     mut commands: Commands,
-    mut query: Query<
-        (Entity, &DefaultSpeed, &mut Speed, &mut Transform),
-        (With<Ball>, Without<Velocity>),
-    >,
+    mut query: Query<(Entity, &DefaultSpeed, &mut Speed), (With<Ball>, With<NeedsLaunch>)>,
 ) {
-    for (entity, default_speed, mut speed, mut transform) in query.iter_mut() {
-        let center = game.area.center().extend(0.0);
-        transform.translation = center;
-
+    for (entity, default_speed, mut speed) in query.iter_mut() {
         let dir_x = if game.rng.random() { 1.0 } else { -1.0 };
         let dir_y = game.rng.random::<f32>() * 2.0 - 1.0;
         let new_dir = Vec3::new(dir_x, dir_y, 0.0).normalize();
-        commands.entity(entity).insert(Velocity(new_dir));
 
+        commands.entity(entity).insert(Velocity(new_dir));
         speed.0 = default_speed.0;
+        commands.entity(entity).remove::<NeedsLaunch>();
     }
 }
 
@@ -348,7 +380,7 @@ fn check_score(
             game.score.0 += 1;
         }
 
-        commands.entity(entity).remove::<Velocity>();
+        commands.entity(entity).insert(NeedsReset);
 
         for entity in score_text_query.iter() {
             commands.entity(entity).insert(Dirty);
@@ -375,7 +407,14 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(
             Update,
-            (paddle_input, close_on_esc, update_score_text, launch_ball),
+            (
+                paddle_input,
+                close_on_esc,
+                update_score_text,
+                reset_ball,
+                wait_ball_launch_timer,
+                launch_ball,
+            ),
         )
         .add_systems(
             FixedUpdate,
