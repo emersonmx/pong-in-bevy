@@ -56,6 +56,9 @@ struct Direction(Vec2);
 struct Speed(f32);
 
 #[derive(Debug, Default, Component, Deref, DerefMut)]
+struct DefaultSpeed(f32);
+
+#[derive(Debug, Default, Component, Deref, DerefMut)]
 struct MaxSpeed(f32);
 
 #[derive(Component)]
@@ -73,10 +76,14 @@ struct Paddle;
 #[derive(Component)]
 struct Ball;
 
+#[derive(Component)]
+struct ScoreText;
+
 #[derive(Debug, Resource)]
 struct Game {
     rng: ChaCha8Rng,
     area: Aabb,
+    score: (u32, u32),
 }
 
 fn setup(mut game: ResMut<Game>, mut commands: Commands) {
@@ -120,9 +127,11 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
         0.0,
     )
     .normalize();
+    let speed = 100.0;
     commands.spawn((
         Ball,
-        Speed(100.0),
+        Speed(speed),
+        DefaultSpeed(speed),
         SpeedStep(0.1),
         MaxSpeed(1000.0),
         Velocity(ball_dir),
@@ -130,6 +139,22 @@ fn setup(mut game: ResMut<Game>, mut commands: Commands) {
         Transform::from_translation(ball_position.extend(0.0)),
         Sprite::from_color(Color::WHITE, ball_size),
     ));
+
+    commands
+        .spawn((Node {
+            display: Display::Flex,
+            justify_content: JustifyContent::Center,
+            width: percent(100),
+            height: percent(100),
+            margin: UiRect {
+                top: px(12),
+                ..default()
+            },
+            ..default()
+        },))
+        .with_children(|parent| {
+            parent.spawn((Text::default(), ScoreText));
+        });
 }
 
 fn paddle_input(
@@ -155,6 +180,13 @@ fn paddle_input(
         if keyboard_input.pressed(down_key) {
             direction.y -= 1.0;
         }
+    }
+}
+
+fn update_score_text(game: Res<Game>, mut query: Query<&mut Text, With<ScoreText>>) {
+    let score = format!("{}   {}", game.score.0, game.score.1);
+    for mut text in query.iter_mut() {
+        *text = Text::new(&score);
     }
 }
 
@@ -262,6 +294,36 @@ fn update_speed(mut query: Query<(&MaxSpeed, &SpeedStep, &mut Speed)>) {
     }
 }
 
+fn check_score_and_reset_ball(
+    mut game: ResMut<Game>,
+    mut ball_query: Query<(&DefaultSpeed, &mut Transform, &mut Velocity, &mut Speed), With<Ball>>,
+) {
+    let game_area = game.area;
+    for (default_speed, mut transform, mut velocity, mut speed) in ball_query.iter_mut() {
+        let ball_x = transform.translation.x;
+        let ball_out_left = ball_x < game_area.left;
+        let ball_out_right = ball_x > game_area.right;
+
+        if ball_out_left || ball_out_right {
+            if ball_out_left {
+                game.score.1 += 1;
+            } else if ball_out_right {
+                game.score.0 += 1;
+            }
+
+            let center = game_area.center().extend(0.0);
+            transform.translation = center;
+
+            let dir_x = if game.rng.random() { 1.0 } else { -1.0 };
+            let dir_y = game.rng.random::<f32>() * 2.0 - 1.0;
+            let new_dir = Vec3::new(dir_x, dir_y, 0.0).normalize();
+            velocity.0 = new_dir;
+
+            speed.0 = default_speed.0;
+        }
+    }
+}
+
 fn close_on_esc(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut app_exit_messages: MessageWriter<AppExit>,
@@ -277,6 +339,7 @@ fn main() {
         .insert_resource(Game {
             rng: rand::make_rng(),
             area: Aabb::new(Vec2::ZERO, Vec2::new(800.0, 600.0)),
+            score: (0, 0),
         })
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -287,7 +350,7 @@ fn main() {
             ..default()
         }))
         .add_systems(Startup, setup)
-        .add_systems(Update, (paddle_input, close_on_esc))
+        .add_systems(Update, (paddle_input, close_on_esc, update_score_text))
         .add_systems(
             FixedUpdate,
             (
@@ -297,6 +360,7 @@ fn main() {
                 bounce_ball_on_paddle,
                 update_collision_rect,
                 update_speed,
+                check_score_and_reset_ball,
             )
                 .chain(),
         )
