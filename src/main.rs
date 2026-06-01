@@ -165,7 +165,7 @@ fn paddle_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&PaddleKeyboardInput, &mut Direction), With<Paddle>>,
 ) {
-    for (input, mut direction) in query.iter_mut() {
+    for (input, mut direction) in &mut query {
         direction.x = 0.0;
         direction.y = 0.0;
 
@@ -186,10 +186,10 @@ fn bot_input(
     let area_center = game.area.center();
     let epsilon = 10.0;
 
-    for ball_transform in ball_query.iter() {
+    for ball_transform in &ball_query {
         let ball_pos = ball_transform.translation.truncate();
 
-        for (paddle_transform, mut direction) in paddle_query.iter_mut() {
+        for (paddle_transform, mut direction) in &mut paddle_query {
             let paddle_pos = paddle_transform.translation.truncate();
             let proximity_x = (paddle_pos.x - area_center.x).abs();
             let close = (ball_pos.x - paddle_pos.x).abs() < proximity_x;
@@ -222,7 +222,7 @@ fn update_score_text(
     mut query: Query<(Entity, &mut Text), (With<ScoreText>, With<Dirty>)>,
 ) {
     let score = format!("{}   {}", game.score.0, game.score.1);
-    for (entity, mut text) in query.iter_mut() {
+    for (entity, mut text) in &mut query {
         *text = Text::new(&score);
         commands.entity(entity).remove::<Dirty>();
     }
@@ -233,7 +233,7 @@ fn reset_ball(
     mut query: Query<(Entity, &mut Transform), (With<Ball>, With<NeedsReset>)>,
     game: Res<Game>,
 ) {
-    for (entity, mut transform) in query.iter_mut() {
+    for (entity, mut transform) in &mut query {
         transform.translation = game.area.center().extend(0.0);
 
         commands.entity(entity).remove::<Velocity>();
@@ -249,7 +249,7 @@ fn wait_ball_launch_timer(
     mut commands: Commands,
     mut query: Query<(Entity, &mut LaunchTimer), With<Ball>>,
 ) {
-    for (entity, mut timer) in query.iter_mut() {
+    for (entity, mut timer) in &mut query {
         if timer.tick(time.delta()).just_finished() {
             commands.entity(entity).insert(NeedsLaunch);
             commands.entity(entity).remove::<LaunchTimer>();
@@ -262,7 +262,7 @@ fn launch_ball(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Speed), (With<Ball>, With<NeedsLaunch>)>,
 ) {
-    for (entity, mut speed) in query.iter_mut() {
+    for (entity, mut speed) in &mut query {
         let dir_x = if game.rng.random() { 1.0 } else { -1.0 };
         let dir_y = game.rng.random::<f32>() * 2.0 - 1.0;
         let new_dir = Vec3::new(dir_x, dir_y, 0.0).normalize();
@@ -280,7 +280,7 @@ fn check_score(
     ball_query: Query<(Entity, &Transform), With<Ball>>,
 ) {
     let game_area = game.area;
-    for (entity, transform) in ball_query.iter() {
+    for (entity, transform) in &ball_query {
         let ball_x = transform.translation.x;
         let ball_out_left = ball_x < game_area.left;
         let ball_out_right = ball_x > game_area.right;
@@ -297,7 +297,7 @@ fn check_score(
 
         commands.entity(entity).insert(NeedsReset);
 
-        for entity in score_text_query.iter() {
+        for entity in &score_text_query {
             commands.entity(entity).insert(Dirty);
         }
     }
@@ -308,7 +308,7 @@ fn move_paddle(
     mut query: Query<(&Speed, &Direction, &mut Transform), With<Paddle>>,
 ) {
     let delta = time.delta().as_secs_f32();
-    for (speed, direction, mut transform) in query.iter_mut() {
+    for (speed, direction, mut transform) in &mut query {
         transform.translation.y += direction.y * speed.0 * delta;
     }
 }
@@ -320,7 +320,7 @@ fn move_ball(
 ) {
     let delta = time.delta().as_secs_f32();
     let game_area = game.area;
-    for (speed, collision_rect, mut velocity, mut transform) in query.iter_mut() {
+    for (speed, collision_rect, mut velocity, mut transform) in &mut query {
         transform.translation += velocity.0 * speed.0 * delta;
 
         let pos = transform.translation.truncate();
@@ -336,7 +336,7 @@ fn clamp_position_to_game_area_top_and_bottom(
     mut query: Query<(&CollisionRect, &mut Transform)>,
 ) {
     let game_area = game.area;
-    for (collision_rect, mut transform) in query.iter_mut() {
+    for (collision_rect, mut transform) in &mut query {
         let pos = transform.translation.truncate();
         let half_size = collision_rect.half_size();
         transform.translation.y = pos
@@ -349,8 +349,8 @@ fn bounce_ball_on_paddle(
     paddle_query: Query<&CollisionRect, With<Paddle>>,
     mut ball_query: Query<(&CollisionRect, &mut Velocity, &mut Transform), With<Ball>>,
 ) {
-    for (ball_collision_rect, mut ball_velocity, mut transform) in ball_query.iter_mut() {
-        for paddle_collision_rect in paddle_query.iter() {
+    for (ball_collision_rect, mut ball_velocity, mut transform) in &mut ball_query {
+        for paddle_collision_rect in &paddle_query {
             if ball_collision_rect.intersects(paddle_collision_rect) {
                 let ball_center = ball_collision_rect.center();
                 let ball_half = ball_collision_rect.half_size();
@@ -391,7 +391,7 @@ fn bounce_ball_on_paddle(
 }
 
 fn update_collision_rect(mut query: Query<(&Transform, &mut CollisionRect)>) {
-    for (transform, mut collision_rect) in query.iter_mut() {
+    for (transform, mut collision_rect) in &mut query {
         let center = transform.translation.truncate();
         let size = collision_rect.size();
         *collision_rect = CollisionRect(Aabb::new(center, size));
@@ -399,7 +399,7 @@ fn update_collision_rect(mut query: Query<(&Transform, &mut CollisionRect)>) {
 }
 
 fn update_speed(game: Res<Game>, mut query: Query<&mut Speed>) {
-    for mut speed in query.iter_mut() {
+    for mut speed in &mut query {
         speed.0 += game.ball_speed_step;
         if speed.0 > game.ball_max_speed {
             speed.0 = game.ball_max_speed;
