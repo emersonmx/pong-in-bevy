@@ -166,8 +166,7 @@ fn paddle_input(
     mut query: Query<(&PaddleKeyboardInput, &mut Direction), With<Paddle>>,
 ) {
     for (input, mut direction) in &mut query {
-        direction.x = 0.0;
-        direction.y = 0.0;
+        direction.0 = Vec2::ZERO;
 
         if keyboard_input.pressed(input.up_key) {
             direction.y += 1.0;
@@ -190,6 +189,8 @@ fn bot_input(
         let ball_pos = ball_transform.translation.truncate();
 
         for (paddle_transform, mut direction) in &mut paddle_query {
+            direction.0 = Vec2::ZERO;
+
             let paddle_pos = paddle_transform.translation.truncate();
             let proximity_x = (paddle_pos.x - area_center.x).abs();
             let close = (ball_pos.x - paddle_pos.x).abs() < proximity_x;
@@ -197,7 +198,6 @@ fn bot_input(
             let target_y = if close { ball_pos.y } else { area_center.y };
 
             let delta_y = target_y - paddle_pos.y;
-            direction.x = 0.0;
             direction.y = if delta_y.abs() > epsilon {
                 delta_y.signum()
             } else {
