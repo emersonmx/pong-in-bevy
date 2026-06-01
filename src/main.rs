@@ -351,41 +351,25 @@ fn bounce_ball_on_paddle(
 ) {
     for (ball_collision_rect, mut ball_velocity, mut transform) in &mut ball_query {
         for paddle_collision_rect in &paddle_query {
-            if ball_collision_rect.intersects(paddle_collision_rect) {
-                let ball_center = ball_collision_rect.center();
-                let ball_half = ball_collision_rect.half_size();
-                let paddle_center = paddle_collision_rect.center();
-                let paddle_half = paddle_collision_rect.half_size();
-
-                let dx = ball_center.x - paddle_center.x;
-                let dy = ball_center.y - paddle_center.y;
-
-                let overlap_x = paddle_half.x + ball_half.x - dx.abs();
-                let overlap_y = paddle_half.y + ball_half.y - dy.abs();
-
-                if overlap_x < overlap_y {
-                    transform.translation.x = if dx > 0.0 {
-                        paddle_collision_rect.right + ball_half.x
-                    } else {
-                        paddle_collision_rect.left - ball_half.x
-                    };
-
-                    let offset = (ball_center.y - paddle_center.y) / paddle_half.y;
-                    let offset = offset.clamp(-1.0, 1.0);
-                    let speed = ball_velocity.length();
-                    let new_dir = Vec2::new(-ball_velocity.x.signum(), offset).normalize();
-                    ball_velocity.x = new_dir.x * speed;
-                    ball_velocity.y = new_dir.y * speed;
-                } else {
-                    transform.translation.y = if dy > 0.0 {
-                        paddle_collision_rect.top + ball_half.y
-                    } else {
-                        paddle_collision_rect.bottom - ball_half.y
-                    };
-
-                    ball_velocity.y = -ball_velocity.y;
-                }
+            if !ball_collision_rect.intersects(paddle_collision_rect) {
+                continue;
             }
+
+            let ball_half = ball_collision_rect.half_size();
+            transform.translation.x = if ball_velocity.x > 0.0 {
+                paddle_collision_rect.left - ball_half.x
+            } else {
+                paddle_collision_rect.right + ball_half.x
+            };
+
+            let ball_center = ball_collision_rect.center();
+            let paddle_center = paddle_collision_rect.center();
+            let paddle_half = paddle_collision_rect.half_size();
+            let offset = (ball_center.y - paddle_center.y) / paddle_half.y;
+            let offset = offset.clamp(-1.0, 1.0);
+            let speed = ball_velocity.length();
+            let new_dir = Vec3::new(-ball_velocity.x.signum(), offset, 0.0).normalize();
+            ball_velocity.0 = new_dir * speed;
         }
     }
 }
