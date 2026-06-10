@@ -413,12 +413,10 @@ fn main() {
             ..default()
         }))
         .add_systems(Startup, setup)
+        .add_systems(PreUpdate, (paddle_input, bot_input, close_on_esc))
         .add_systems(
             Update,
             (
-                paddle_input,
-                bot_input,
-                close_on_esc,
                 update_score_text,
                 reset_ball,
                 wait_ball_launch_timer,
