@@ -274,36 +274,6 @@ fn launch_ball(
     }
 }
 
-fn check_score(
-    mut commands: Commands,
-    mut game: ResMut<Game>,
-    score_text_query: Query<Entity, With<ScoreText>>,
-    ball_query: Query<(Entity, &Transform), With<Ball>>,
-) {
-    let game_area = game.area;
-    for (entity, transform) in &ball_query {
-        let ball_x = transform.translation.x;
-        let ball_out_left = ball_x < game_area.left;
-        let ball_out_right = ball_x > game_area.right;
-        let ball_inside_area = !ball_out_left && !ball_out_right;
-        if ball_inside_area {
-            continue;
-        }
-
-        if ball_out_left {
-            game.score.1 += 1;
-        } else if ball_out_right {
-            game.score.0 += 1;
-        }
-
-        commands.entity(entity).insert(NeedsReset);
-
-        for entity in &score_text_query {
-            commands.entity(entity).insert(Dirty);
-        }
-    }
-}
-
 fn move_paddle(
     time: Res<Time<Fixed>>,
     mut query: Query<(&Speed, &Direction, &mut Transform), With<Paddle>>,
@@ -375,6 +345,36 @@ fn bounce_ball_on_paddle(
     }
 }
 
+fn check_score(
+    mut commands: Commands,
+    mut game: ResMut<Game>,
+    score_text_query: Query<Entity, With<ScoreText>>,
+    ball_query: Query<(Entity, &Transform), With<Ball>>,
+) {
+    let game_area = game.area;
+    for (entity, transform) in &ball_query {
+        let ball_x = transform.translation.x;
+        let ball_out_left = ball_x < game_area.left;
+        let ball_out_right = ball_x > game_area.right;
+        let ball_inside_area = !ball_out_left && !ball_out_right;
+        if ball_inside_area {
+            continue;
+        }
+
+        if ball_out_left {
+            game.score.1 += 1;
+        } else if ball_out_right {
+            game.score.0 += 1;
+        }
+
+        commands.entity(entity).insert(NeedsReset);
+
+        for entity in &score_text_query {
+            commands.entity(entity).insert(Dirty);
+        }
+    }
+}
+
 fn update_collision_rect(mut query: Query<(&Transform, &mut CollisionRect)>) {
     for (transform, mut collision_rect) in &mut query {
         let center = transform.translation.truncate();
@@ -414,23 +414,18 @@ fn main() {
         }))
         .add_systems(Startup, setup)
         .add_systems(PreUpdate, (paddle_input, bot_input, close_on_esc))
-        .add_systems(
-            Update,
-            (
-                update_score_text,
-                reset_ball,
-                wait_ball_launch_timer,
-                launch_ball,
-                check_score,
-            ),
-        )
+        .add_systems(Update, update_score_text)
         .add_systems(
             FixedUpdate,
             (
+                reset_ball,
+                wait_ball_launch_timer,
+                launch_ball,
                 move_paddle,
                 move_ball,
                 clamp_position_to_game_area_top_and_bottom,
                 bounce_ball_on_paddle,
+                check_score,
                 update_collision_rect,
                 update_speed,
             )
