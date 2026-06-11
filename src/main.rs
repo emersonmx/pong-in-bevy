@@ -302,7 +302,7 @@ fn launch_ball(
     }
 }
 
-fn move_paddle(
+fn paddle_movement(
     time: Res<Time<Fixed>>,
     mut query: Query<(&Speed, &Direction, &mut Transform), With<Paddle>>,
 ) {
@@ -312,7 +312,7 @@ fn move_paddle(
     }
 }
 
-fn move_ball(
+fn ball_movement(
     time: Res<Time<Fixed>>,
     game: Res<Game>,
     mut query: Query<(&Speed, &CollisionRect, &mut Velocity, &mut Transform), With<Ball>>,
@@ -451,8 +451,8 @@ fn main() {
                 reset_ball,
                 wait_ball_launch_timer,
                 launch_ball,
-                move_paddle,
-                move_ball,
+                paddle_movement,
+                ball_movement,
                 clamp_position_to_game_area_top_and_bottom,
                 bounce_ball_on_paddle,
                 check_score,
