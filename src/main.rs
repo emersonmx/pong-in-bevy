@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::WindowResolution};
+use bevy::{prelude::*, sprite::Anchor, window::WindowResolution};
 use rand::{RngExt, rngs::ChaCha8Rng};
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -43,7 +43,8 @@ impl Aabb {
     }
 }
 
-const PADDLE_SIZE: Vec2 = Vec2::new(20.0, 200.0);
+const PADDLE_SIZE: Vec2 = Vec2::new(20.0, 100.0);
+const PADDLE_OFFSET: f32 = 10.0;
 const BALL_SIZE: Vec2 = Vec2::new(10.0, 10.0);
 
 #[derive(Debug, Default, Component, Deref, DerefMut)]
@@ -108,7 +109,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, game.area.size().y)),
     ));
 
-    let left_position = Vec3::new(game.area.left + PADDLE_SIZE.x, 0.0, 0.0);
+    let left_position = Vec3::new(game.area.left + PADDLE_OFFSET, 0.0, 0.0);
     commands.spawn((
         Name::new("left paddle"),
         Paddle,
@@ -119,11 +120,12 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         Speed(game.default_paddle_speed),
         Direction::default(),
         CollisionRect(Aabb::new(left_position.truncate(), PADDLE_SIZE)),
+        Anchor::CENTER_LEFT,
         Transform::from_translation(left_position),
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
     ));
 
-    let right_position = Vec3::new(game.area.right - PADDLE_SIZE.x, 0.0, 0.0);
+    let right_position = Vec3::new(game.area.right - PADDLE_OFFSET, 0.0, 0.0);
     commands.spawn((
         Name::new("right paddle"),
         Paddle,
@@ -131,6 +133,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         Speed(game.default_paddle_speed),
         Direction::default(),
         CollisionRect(Aabb::new(right_position.truncate(), PADDLE_SIZE)),
+        Anchor::CENTER_RIGHT,
         Transform::from_translation(right_position),
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
     ));
