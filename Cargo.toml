@@ -6,14 +6,14 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 bevy = "0.18"
-bevy-inspector-egui = "0.36.0"
-log = { version = "0.4.32", features = [
+bevy-inspector-egui = "0.36"
+log = { version = "0.4", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
 rand = { version = "0.10", features = ["chacha"] }
 thiserror = "2"
-tracing = { version = "0.1.44", features = [
+tracing = { version = "0.1", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
