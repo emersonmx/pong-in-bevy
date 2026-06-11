@@ -78,6 +78,9 @@ struct Paddle;
 #[derive(Component, Reflect)]
 struct Ball;
 
+#[derive(Debug, Component, Reflect)]
+struct Wall(Plane2d);
+
 #[derive(Component, Reflect)]
 struct ScoreText;
 
@@ -111,6 +114,19 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         Name::new("MiddleLine"),
         Transform::from_translation(game.area.center().extend(0.0)),
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, game.area.size().y)),
+    ));
+
+    commands.spawn((
+        Name::new("TopWall"),
+        Wall(Plane2d::new(Vec2::X)),
+        Transform::from_xyz(game.area.center().x, game.area.top, 0.0),
+        Sprite::from_color(Color::WHITE, Vec2::new(game.area.size().x, 2.0)),
+    ));
+    commands.spawn((
+        Name::new("BottomWall"),
+        Wall(Plane2d::new(Vec2::X)),
+        Transform::from_xyz(game.area.center().x, game.area.bottom, 0.0),
+        Sprite::from_color(Color::WHITE, Vec2::new(game.area.size().x, 2.0)),
     ));
 
     let left_position = Vec3::new(game.area.left + PADDLE_OFFSET, 0.0, 0.0);
