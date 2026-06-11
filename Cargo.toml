@@ -6,17 +6,25 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 bevy = "0.18"
-log = { version = "*", features = [
+log = { version = "0.4.32", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
 rand = { version = "0.10", features = ["chacha"] }
 thiserror = "2"
+tracing = { version = "0.1.44", features = [
+    "max_level_debug",
+    "release_max_level_warn",
+] }
 
 [dev-dependencies]
 insta = "1.47"
 mockall = "0.14"
 rstest = "0.26"
+
+[lints.clippy]
+too_many_arguments = "allow"
+type_complexity = "allow"
 
 [profile.dev]
 opt-level = 1
