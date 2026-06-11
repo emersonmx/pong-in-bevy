@@ -2,7 +2,7 @@ use bevy::{prelude::*, sprite::Anchor, window::WindowResolution};
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use rand::{RngExt, rngs::ChaCha8Rng};
 
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, Reflect)]
 struct Aabb {
     left: f32,
     right: f32,
@@ -48,51 +48,51 @@ const PADDLE_SIZE: Vec2 = Vec2::new(20.0, 100.0);
 const PADDLE_OFFSET: f32 = 10.0;
 const BALL_SIZE: Vec2 = Vec2::new(10.0, 10.0);
 
-#[derive(Debug, Default, Component, Deref, DerefMut)]
+#[derive(Debug, Default, Component, Reflect, Deref, DerefMut)]
 struct Direction(Vec2);
 
-#[derive(Debug, Default, Component)]
+#[derive(Debug, Default, Component, Reflect)]
 struct Speed(f32);
 
-#[derive(Debug, Default, Component, Deref, DerefMut)]
+#[derive(Debug, Default, Component, Reflect, Deref, DerefMut)]
 struct Velocity(Vec3);
 
 #[derive(Debug, Component, Deref, DerefMut)]
 struct CollisionRect(Aabb);
 
-#[derive(Debug, Default, Component, Deref, DerefMut)]
+#[derive(Debug, Default, Component, Reflect, Deref, DerefMut)]
 struct LaunchTimer(Timer);
 
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Reflect)]
 struct PaddleKeyboardInput {
     up_key: KeyCode,
     down_key: KeyCode,
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct Bot;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct Paddle;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct Ball;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct ScoreText;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct NeedsReset;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct NeedsLaunch;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct Dirty;
 
-#[derive(Debug, Resource)]
+#[derive(Debug, Resource, Reflect)]
+#[reflect(Resource)]
 struct Game {
-    rng: ChaCha8Rng,
     area: Aabb,
     score: (u32, u32),
     default_paddle_speed: f32,
@@ -101,18 +101,21 @@ struct Game {
     ball_max_speed: f32,
 }
 
+#[derive(Debug, Resource, Deref, DerefMut)]
+struct GameRng(ChaCha8Rng);
+
 fn setup(game: Res<Game>, mut commands: Commands) {
     commands.spawn(Camera2d);
 
     commands.spawn((
-        Name::new("middle line"),
+        Name::new("MiddleLine"),
         Transform::from_translation(game.area.center().extend(0.0)),
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, game.area.size().y)),
     ));
 
     let left_position = Vec3::new(game.area.left + PADDLE_OFFSET, 0.0, 0.0);
     commands.spawn((
-        Name::new("left paddle"),
+        Name::new("LeftPaddle"),
         Paddle,
         PaddleKeyboardInput {
             up_key: KeyCode::KeyW,
@@ -128,7 +131,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
 
     let right_position = Vec3::new(game.area.right - PADDLE_OFFSET, 0.0, 0.0);
     commands.spawn((
-        Name::new("right paddle"),
+        Name::new("RightPaddle"),
         Paddle,
         Bot,
         Speed(game.default_paddle_speed),
@@ -141,7 +144,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
 
     let ball_position = game.area.center();
     commands.spawn((
-        Name::new("ball"),
+        Name::new("Ball"),
         Ball,
         Speed(game.default_ball_speed),
         NeedsReset,
@@ -151,19 +154,22 @@ fn setup(game: Res<Game>, mut commands: Commands) {
     ));
 
     commands
-        .spawn((Node {
-            display: Display::Flex,
-            justify_content: JustifyContent::Center,
-            width: percent(100),
-            height: percent(100),
-            margin: UiRect {
-                top: px(12),
+        .spawn((
+            Name::new("GameLayout"),
+            Node {
+                display: Display::Flex,
+                justify_content: JustifyContent::Center,
+                width: percent(100),
+                height: percent(100),
+                margin: UiRect {
+                    top: px(12),
+                    ..default()
+                },
                 ..default()
             },
-            ..default()
-        },))
+        ))
         .with_children(|parent| {
-            parent.spawn((Name::new("score"), Text::default(), ScoreText, Dirty));
+            parent.spawn((Name::new("Score"), Text::default(), ScoreText, Dirty));
         });
 }
 
@@ -264,13 +270,14 @@ fn wait_ball_launch_timer(
 }
 
 fn launch_ball(
-    mut game: ResMut<Game>,
+    game: Res<Game>,
+    mut rng: ResMut<GameRng>,
     mut commands: Commands,
     mut query: Query<(Entity, &mut Speed), (With<Ball>, With<NeedsLaunch>)>,
 ) {
     for (entity, mut speed) in &mut query {
-        let dir_x = if game.rng.random() { 1.0 } else { -1.0 };
-        let dir_y = game.rng.random::<f32>() * 2.0 - 1.0;
+        let dir_x = if rng.random() { 1.0 } else { -1.0 };
+        let dir_y = rng.random::<f32>() * 2.0 - 1.0;
         let new_dir = Vec3::new(dir_x, dir_y, 0.0).normalize();
 
         commands.entity(entity).insert(Velocity(new_dir));
@@ -400,8 +407,8 @@ fn update_speed(game: Res<Game>, mut query: Query<&mut Speed>) {
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(GameRng(rand::make_rng()))
         .insert_resource(Game {
-            rng: rand::make_rng(),
             area: Aabb::new(Vec2::ZERO, Vec2::new(800.0, 600.0)),
             score: (0, 0),
             default_paddle_speed: 300.0,
