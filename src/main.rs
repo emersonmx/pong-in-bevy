@@ -43,6 +43,9 @@ impl Aabb {
     }
 }
 
+const PADDLE_SIZE: Vec2 = Vec2::new(20.0, 200.0);
+const BALL_SIZE: Vec2 = Vec2::new(10.0, 10.0);
+
 #[derive(Debug, Default, Component, Deref, DerefMut)]
 struct Direction(Vec2);
 
@@ -105,8 +108,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, game.area.size().y)),
     ));
 
-    let paddle_size = Vec2::new(20.0, 100.0);
-    let left_position = Vec3::new(game.area.left + paddle_size.x, 0.0, 0.0);
+    let left_position = Vec3::new(game.area.left + PADDLE_SIZE.x, 0.0, 0.0);
     commands.spawn((
         Name::new("left paddle"),
         Paddle,
@@ -116,33 +118,32 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         },
         Speed(game.default_paddle_speed),
         Direction::default(),
-        CollisionRect(Aabb::new(left_position.truncate(), paddle_size)),
+        CollisionRect(Aabb::new(left_position.truncate(), PADDLE_SIZE)),
         Transform::from_translation(left_position),
-        Sprite::from_color(Color::WHITE, paddle_size),
+        Sprite::from_color(Color::WHITE, PADDLE_SIZE),
     ));
 
-    let right_position = Vec3::new(game.area.right - paddle_size.x, 0.0, 0.0);
+    let right_position = Vec3::new(game.area.right - PADDLE_SIZE.x, 0.0, 0.0);
     commands.spawn((
         Name::new("right paddle"),
         Paddle,
         Bot,
         Speed(game.default_paddle_speed),
         Direction::default(),
-        CollisionRect(Aabb::new(right_position.truncate(), paddle_size)),
+        CollisionRect(Aabb::new(right_position.truncate(), PADDLE_SIZE)),
         Transform::from_translation(right_position),
-        Sprite::from_color(Color::WHITE, paddle_size),
+        Sprite::from_color(Color::WHITE, PADDLE_SIZE),
     ));
 
-    let ball_size = Vec2::new(10.0, 10.0);
     let ball_position = game.area.center();
     commands.spawn((
         Name::new("ball"),
         Ball,
         Speed(game.default_ball_speed),
         NeedsReset,
-        CollisionRect(Aabb::new(ball_position, ball_size)),
+        CollisionRect(Aabb::new(ball_position, BALL_SIZE)),
         Transform::from_translation(ball_position.extend(0.0)),
-        Sprite::from_color(Color::WHITE, ball_size),
+        Sprite::from_color(Color::WHITE, BALL_SIZE),
     ));
 
     commands
