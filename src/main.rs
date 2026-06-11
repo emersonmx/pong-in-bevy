@@ -1,4 +1,5 @@
 use bevy::{prelude::*, sprite::Anchor, window::WindowResolution};
+use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use rand::{RngExt, rngs::ChaCha8Rng};
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -416,6 +417,8 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(EguiPlugin::default())
+        .add_plugins(WorldInspectorPlugin::new())
         .add_systems(Startup, setup)
         .add_systems(PreUpdate, (paddle_input, bot_input, close_on_esc))
         .add_systems(Update, update_score_text)
