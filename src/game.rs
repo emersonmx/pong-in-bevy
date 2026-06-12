@@ -5,15 +5,59 @@ use bevy::{
 };
 use rand::{RngExt, rngs::ChaCha8Rng};
 
+#[derive(Debug, Default, Clone, PartialEq, Reflect)]
+pub enum Mode {
+    #[default]
+    OneVsOne,
+    OneVsAI,
+    AIVsOne,
+    AIVsAI,
+}
+
+impl Mode {
+    pub fn next_mode(&self) -> Self {
+        match self {
+            Mode::OneVsOne => Mode::OneVsAI,
+            Mode::OneVsAI => Mode::AIVsOne,
+            Mode::AIVsOne => Mode::AIVsAI,
+            Mode::AIVsAI => Mode::OneVsOne,
+        }
+    }
+
+    pub fn previous_mode(&self) -> Self {
+        match self {
+            Mode::OneVsOne => Mode::AIVsAI,
+            Mode::OneVsAI => Mode::OneVsOne,
+            Mode::AIVsOne => Mode::OneVsAI,
+            Mode::AIVsAI => Mode::AIVsOne,
+        }
+    }
+}
+
 #[derive(Debug, Resource, Reflect)]
 #[reflect(Resource)]
-struct Game {
-    area: Rectangle,
-    score: (u32, u32),
-    default_paddle_speed: f32,
-    default_ball_speed: f32,
-    ball_speed_step: f32,
-    ball_max_speed: f32,
+pub struct Game {
+    pub area: Rectangle,
+    pub score: (u32, u32),
+    pub default_paddle_speed: f32,
+    pub default_ball_speed: f32,
+    pub ball_speed_step: f32,
+    pub ball_max_speed: f32,
+    pub mode: Mode,
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        Self {
+            area: Rectangle::new(800.0, 600.0),
+            score: (0, 0),
+            default_paddle_speed: 300.0,
+            default_ball_speed: 100.0,
+            ball_speed_step: 0.1,
+            ball_max_speed: 1000.0,
+            mode: Mode::OneVsAI,
+        }
+    }
 }
 
 #[derive(Debug, Resource, Deref, DerefMut)]
@@ -112,13 +156,9 @@ fn setup(game: Res<Game>, mut commands: Commands) {
     ));
 
     let paddle_offset = game.area.half_size.x - 20.0;
-    commands.spawn((
+    let mut left_paddle = commands.spawn((
         Name::new("LeftPaddle"),
         Paddle,
-        PaddleKeyboardInput {
-            up_key: KeyCode::KeyW,
-            down_key: KeyCode::KeyS,
-        },
         Speed(game.default_paddle_speed),
         Direction::default(),
         CollisionRect(Rectangle::from_size(PADDLE_SIZE)),
@@ -126,11 +166,21 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
         DespawnOnExit(AppState::Game),
     ));
+    match game.mode {
+        Mode::OneVsOne | Mode::OneVsAI => {
+            left_paddle.insert(PaddleKeyboardInput {
+                up_key: KeyCode::KeyW,
+                down_key: KeyCode::KeyS,
+            });
+        }
+        Mode::AIVsOne | Mode::AIVsAI => {
+            left_paddle.insert(Bot);
+        }
+    }
 
-    commands.spawn((
+    let mut right_paddle = commands.spawn((
         Name::new("RightPaddle"),
         Paddle,
-        Bot,
         Speed(game.default_paddle_speed),
         Direction::default(),
         CollisionRect(Rectangle::from_size(PADDLE_SIZE)),
@@ -138,6 +188,17 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
         DespawnOnExit(AppState::Game),
     ));
+    match game.mode {
+        Mode::OneVsOne | Mode::AIVsOne => {
+            right_paddle.insert(PaddleKeyboardInput {
+                up_key: KeyCode::ArrowUp,
+                down_key: KeyCode::ArrowDown,
+            });
+        }
+        Mode::OneVsAI | Mode::AIVsAI => {
+            right_paddle.insert(Bot);
+        }
+    }
 
     commands.spawn((
         Name::new("Ball"),
@@ -398,14 +459,7 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GameRng(rand::make_rng()))
-            .insert_resource(Game {
-                area: Rectangle::new(800.0, 600.0),
-                score: (0, 0),
-                default_paddle_speed: 300.0,
-                default_ball_speed: 100.0,
-                ball_speed_step: 0.1,
-                ball_max_speed: 1000.0,
-            })
+            .init_resource::<Game>()
             .add_systems(OnEnter(AppState::Game), setup)
             .add_systems(
                 PreUpdate,

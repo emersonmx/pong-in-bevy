@@ -1,5 +1,5 @@
 use crate::states::AppState;
-use bevy::{prelude::*, reflect::Enum};
+use bevy::prelude::*;
 
 fn setup(mut commands: Commands) {
     commands
@@ -12,7 +12,6 @@ fn setup(mut commands: Commands) {
                 align_items: AlignItems::Center,
                 width: percent(100),
                 height: percent(100),
-                border: UiRect::all(px(1)),
                 ..default()
             },
             BorderColor::from(Color::WHITE),
@@ -33,7 +32,7 @@ fn wait_any_key(
     mut next_state: ResMut<NextState<AppState>>,
 ) {
     if keyboard_input.get_just_pressed().next().is_some() {
-        next_state.set(AppState::Game);
+        next_state.set(AppState::SelectPlayers);
     }
 }
 

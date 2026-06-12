@@ -1,10 +1,13 @@
-use crate::{game::GamePlugin, menu::MenuPlugin, states::StatePlugin};
+use crate::{
+    game::GamePlugin, menu::MenuPlugin, select_players::SelectPlayersPlugin, states::StatesPlugin,
+};
 use bevy::{prelude::*, window::WindowResolution};
 use debug_plugins::DebugPlugins;
 
 mod debug_plugins;
 mod game;
 mod menu;
+mod select_players;
 mod states;
 
 fn main() {
@@ -19,8 +22,9 @@ fn main() {
             ..default()
         }))
         .add_plugins(DebugPlugins)
-        .add_plugins(StatePlugin)
+        .add_plugins(StatesPlugin)
         .add_plugins(MenuPlugin)
+        .add_plugins(SelectPlayersPlugin)
         .add_plugins(GamePlugin)
         .add_systems(Startup, setup)
         .run();

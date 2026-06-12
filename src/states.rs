@@ -8,9 +8,9 @@ pub enum AppState {
     Game,
 }
 
-pub struct StatePlugin;
+pub struct StatesPlugin;
 
-impl Plugin for StatePlugin {
+impl Plugin for StatesPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<AppState>();
     }
