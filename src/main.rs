@@ -3,8 +3,10 @@ use bevy::{
     prelude::*,
     window::WindowResolution,
 };
-use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+use debug_plugins::DebugPlugins;
 use rand::{RngExt, rngs::ChaCha8Rng};
+
+mod debug_plugins;
 
 const PADDLE_SIZE: Vec2 = Vec2::new(20.0, 100.0);
 const BALL_SIZE: Vec2 = Vec2::new(10.0, 10.0);
@@ -416,7 +418,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((EguiPlugin::default(), WorldInspectorPlugin::new()))
+        .add_plugins(DebugPlugins)
         .add_systems(Startup, setup)
         .add_systems(PreUpdate, (paddle_input, bot_input, close_on_esc))
         .add_systems(Update, update_score_text)
