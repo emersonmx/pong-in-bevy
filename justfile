@@ -21,7 +21,7 @@ build *ARGS:
 run *ARGS:
     cargo run \
         --features \
-            bevy/dynamic_linking \
+            bevy/dynamic_linking,bevy/dev \
         {{ ARGS }}
 
 watch *ARGS:
