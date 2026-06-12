@@ -1,3 +1,4 @@
+use crate::states::AppState;
 use bevy::{
     math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume},
     prelude::*,
@@ -73,12 +74,11 @@ struct NeedsLaunch;
 struct Dirty;
 
 fn setup(game: Res<Game>, mut commands: Commands) {
-    commands.spawn(Camera2d);
-
     commands.spawn((
         Name::new("MiddleLine"),
         Transform::from_xyz(0.0, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, game.area.size().y)),
+        DespawnOnExit(AppState::Game),
     ));
 
     let wall_offset = game.area.half_size.y;
@@ -87,12 +87,14 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         Wall,
         CollisionPlane(Plane2d::new(Vec2::NEG_Y)),
         Transform::from_xyz(0.0, wall_offset, 0.0),
+        DespawnOnExit(AppState::Game),
     ));
     commands.spawn((
         Name::new("BottomWall"),
         Wall,
         CollisionPlane(Plane2d::new(Vec2::Y)),
         Transform::from_xyz(0.0, -wall_offset, 0.0),
+        DespawnOnExit(AppState::Game),
     ));
 
     let respawn_offset = game.area.half_size.x;
@@ -100,11 +102,13 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         Name::new("LeftRespawn"),
         RespawnBallArea,
         Transform::from_xyz(-respawn_offset, 0.0, 0.0),
+        DespawnOnExit(AppState::Game),
     ));
     commands.spawn((
         Name::new("RightRespawn"),
         RespawnBallArea,
         Transform::from_xyz(respawn_offset, 0.0, 0.0),
+        DespawnOnExit(AppState::Game),
     ));
 
     let paddle_offset = game.area.half_size.x - 20.0;
@@ -120,6 +124,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         CollisionRect(Rectangle::from_size(PADDLE_SIZE)),
         Transform::from_xyz(-paddle_offset, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
+        DespawnOnExit(AppState::Game),
     ));
 
     commands.spawn((
@@ -131,6 +136,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         CollisionRect(Rectangle::from_size(PADDLE_SIZE)),
         Transform::from_xyz(paddle_offset, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
+        DespawnOnExit(AppState::Game),
     ));
 
     commands.spawn((
@@ -141,6 +147,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         CollisionRect(Rectangle::from_size(BALL_SIZE)),
         Transform::from_xyz(0.0, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, BALL_SIZE),
+        DespawnOnExit(AppState::Game),
     ));
 
     commands
@@ -157,6 +164,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
                 },
                 ..default()
             },
+            DespawnOnExit(AppState::Game),
         ))
         .with_children(|parent| {
             parent.spawn((Name::new("Score"), Text::default(), ScoreText, Dirty));
@@ -205,15 +213,6 @@ fn bot_input(
                 0.0
             };
         }
-    }
-}
-
-fn close_on_esc(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut app_exit_messages: MessageWriter<AppExit>,
-) {
-    if keyboard_input.just_pressed(KeyCode::Escape) {
-        app_exit_messages.write(AppExit::Success);
     }
 }
 
@@ -407,9 +406,12 @@ impl Plugin for GamePlugin {
                 ball_speed_step: 0.1,
                 ball_max_speed: 1000.0,
             })
-            .add_systems(Startup, setup)
-            .add_systems(PreUpdate, (paddle_input, bot_input, close_on_esc))
-            .add_systems(Update, update_score_text)
+            .add_systems(OnEnter(AppState::Game), setup)
+            .add_systems(
+                PreUpdate,
+                (paddle_input, bot_input).run_if(in_state(AppState::Game)),
+            )
+            .add_systems(Update, update_score_text.run_if(in_state(AppState::Game)))
             .add_systems(
                 FixedUpdate,
                 (
@@ -421,7 +423,8 @@ impl Plugin for GamePlugin {
                     check_score,
                     update_speed,
                 )
-                    .chain(),
+                    .chain()
+                    .run_if(in_state(AppState::Game)),
             );
     }
 }

@@ -1,9 +1,11 @@
-use crate::game::GamePlugin;
+use crate::{game::GamePlugin, menu::MenuPlugin, states::StatePlugin};
 use bevy::{prelude::*, window::WindowResolution};
 use debug_plugins::DebugPlugins;
 
 mod debug_plugins;
 mod game;
+mod menu;
+mod states;
 
 fn main() {
     App::new()
@@ -17,6 +19,13 @@ fn main() {
             ..default()
         }))
         .add_plugins(DebugPlugins)
+        .add_plugins(StatePlugin)
+        .add_plugins(MenuPlugin)
         .add_plugins(GamePlugin)
+        .add_systems(Startup, setup)
         .run();
+}
+
+fn setup(mut commands: Commands) {
+    commands.spawn(Camera2d);
 }
