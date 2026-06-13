@@ -88,19 +88,11 @@ fn select_option(
     let down_pressed = keyboard_input.just_pressed(KeyCode::ArrowDown);
     let is_dirty = up_pressed || down_pressed;
 
-    if *game_mode == GameMode::OneVsOne && up_pressed {
-        return;
-    }
-
-    if *game_mode == GameMode::AIVsAI && down_pressed {
-        return;
-    }
-
     if up_pressed {
-        *game_mode = game_mode.previous_mode();
+        *game_mode = game_mode.previous();
     }
     if down_pressed {
-        *game_mode = game_mode.next_mode();
+        *game_mode = game_mode.next();
     }
 
     if is_dirty {

@@ -33,18 +33,18 @@ pub enum GameMode {
 }
 
 impl GameMode {
-    pub fn next_mode(&self) -> Self {
+    pub fn next(&self) -> Self {
         match self {
             Self::OneVsOne => Self::OneVsAI,
             Self::OneVsAI => Self::AIVsOne,
             Self::AIVsOne => Self::AIVsAI,
-            Self::AIVsAI => Self::OneVsOne,
+            Self::AIVsAI => Self::AIVsAI,
         }
     }
 
-    pub fn previous_mode(&self) -> Self {
+    pub fn previous(&self) -> Self {
         match self {
-            Self::OneVsOne => Self::AIVsAI,
+            Self::OneVsOne => Self::OneVsOne,
             Self::OneVsAI => Self::OneVsOne,
             Self::AIVsOne => Self::OneVsAI,
             Self::AIVsAI => Self::AIVsOne,
