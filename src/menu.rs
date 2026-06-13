@@ -2,29 +2,28 @@ use crate::app::State;
 use bevy::prelude::*;
 
 fn setup(mut commands: Commands) {
-    commands
-        .spawn((
-            Name::new("MenuLayout"),
-            Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Column,
-                justify_content: JustifyContent::SpaceAround,
-                align_items: AlignItems::Center,
-                width: percent(100),
-                height: percent(100),
-                ..default()
-            },
-            BorderColor::from(Color::WHITE),
-            DespawnOnExit(State::Menu),
-        ))
-        .with_children(|parent| {
-            parent.spawn((
+    commands.spawn((
+        Name::new("MenuLayout"),
+        Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::SpaceAround,
+            align_items: AlignItems::Center,
+            width: percent(100),
+            height: percent(100),
+            ..default()
+        },
+        BorderColor::from(Color::WHITE),
+        DespawnOnExit(State::Menu),
+        children![
+            (
                 Name::new("Title"),
                 Text::new("PONG"),
                 TextFont::from_font_size(200.0),
-            ));
-            parent.spawn((Name::new("AnyKey"), Text::new("Press any key to start")));
-        });
+            ),
+            (Name::new("AnyKey"), Text::new("Press any key to start"))
+        ],
+    ));
 }
 
 fn wait_any_key(

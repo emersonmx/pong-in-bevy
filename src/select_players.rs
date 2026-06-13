@@ -10,66 +10,68 @@ struct Dirty;
 fn setup(mut game_mode: ResMut<GameMode>, mut commands: Commands) {
     *game_mode = default();
 
-    commands
-        .spawn((
-            Name::new("SelectPlayersLayout"),
-            Node {
-                flex_direction: FlexDirection::Column,
-                justify_content: JustifyContent::SpaceAround,
-                align_items: AlignItems::Center,
-                width: percent(100),
-                height: percent(100),
-                ..default()
-            },
-            DespawnOnExit(State::SelectPlayers),
-        ))
-        .with_children(|parent| {
-            parent.spawn((
+    commands.spawn((
+        Name::new("SelectPlayersLayout"),
+        Node {
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::SpaceAround,
+            align_items: AlignItems::Center,
+            width: percent(100),
+            height: percent(100),
+            ..default()
+        },
+        DespawnOnExit(State::SelectPlayers),
+        children![
+            (
                 Name::new("Title"),
                 Text::new("Select Players"),
                 TextFont::from_font_size(64.0),
-            ));
-            parent
-                .spawn((
-                    Name::new("Options"),
-                    Node {
-                        flex_direction: FlexDirection::Column,
-                        width: percent(20),
-                        ..default()
-                    },
-                ))
-                .with_children(|parent| {
-                    let layout = Node {
-                        justify_content: JustifyContent::SpaceAround,
-                        border: UiRect::all(px(1)),
-                        ..default()
-                    };
-                    let item = Node {
-                        width: percent(10),
-                        ..default()
-                    };
-                    let options = [
-                        ("OneVsOne", "1", "vs", "1", GameMode::OneVsOne),
-                        ("OneVsAI", "1", "vs", "AI", GameMode::OneVsAI),
-                        ("AIVsOne", "AI", "vs", "1", GameMode::AIVsOne),
-                        ("AIVsAI", "AI", "vs", "AI", GameMode::AIVsAI),
-                    ];
+            ),
+            (
+                Name::new("Options"),
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    width: percent(20),
+                    ..default()
+                },
+                children![
+                    menu_item("OneVsOne", "1", "vs", "1", GameMode::OneVsOne),
+                    menu_item("OneVsAI", "1", "vs", "AI", GameMode::OneVsAI),
+                    menu_item("AIVsOne", "AI", "vs", "1", GameMode::AIVsOne),
+                    menu_item("AIVsAI", "AI", "vs", "AI", GameMode::AIVsAI),
+                ]
+            )
+        ],
+    ));
+}
 
-                    for (name, left, middle, right, mode) in options {
-                        let mut entity = parent.spawn((
-                            Name::new(name),
-                            layout.clone(),
-                            GameModeOption(mode),
-                            Dirty,
-                        ));
-                        entity.with_children(|parent| {
-                            parent.spawn((item.clone(), Text::new(left)));
-                            parent.spawn((item.clone(), Text::new(middle)));
-                            parent.spawn((item.clone(), Text::new(right)));
-                        });
-                    }
-                });
-        });
+fn menu_item(
+    name: impl Into<String>,
+    left: impl Into<String>,
+    middle: impl Into<String>,
+    right: impl Into<String>,
+    mode: GameMode,
+) -> impl Bundle {
+    let item = Node {
+        width: percent(10),
+        ..default()
+    };
+
+    (
+        Name::new(name.into()),
+        Node {
+            justify_content: JustifyContent::SpaceAround,
+            border: UiRect::all(px(1)),
+            ..default()
+        },
+        GameModeOption(mode),
+        Dirty,
+        children![
+            (item.clone(), Text::new(left)),
+            (item.clone(), Text::new(middle)),
+            (item.clone(), Text::new(right))
+        ],
+    )
 }
 
 fn select_option(

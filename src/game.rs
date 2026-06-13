@@ -201,25 +201,22 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         DespawnOnExit(State::Game),
     ));
 
-    commands
-        .spawn((
-            Name::new("GameLayout"),
-            Node {
-                display: Display::Flex,
-                justify_content: JustifyContent::Center,
-                width: percent(100),
-                height: percent(100),
-                margin: UiRect {
-                    top: px(12),
-                    ..default()
-                },
+    commands.spawn((
+        Name::new("GameLayout"),
+        Node {
+            display: Display::Flex,
+            justify_content: JustifyContent::Center,
+            width: percent(100),
+            height: percent(100),
+            margin: UiRect {
+                top: px(12),
                 ..default()
             },
-            DespawnOnExit(State::Game),
-        ))
-        .with_children(|parent| {
-            parent.spawn((Name::new("Score"), Text::default(), ScoreText, Dirty));
-        });
+            ..default()
+        },
+        DespawnOnExit(State::Game),
+        children![(Name::new("Score"), Text::default(), ScoreText, Dirty)],
+    ));
 }
 
 fn paddle_input(
