@@ -269,8 +269,8 @@ fn bot_input(
 
 fn update_score_text(
     game_score: Res<GameScore>,
-    mut commands: Commands,
     mut scores: Query<(Entity, &mut Text), (With<ScoreText>, With<Dirty>)>,
+    mut commands: Commands,
 ) {
     let score = format!("{}   {}", game_score.0, game_score.1);
     for (entity, mut text) in &mut scores {
@@ -280,8 +280,8 @@ fn update_score_text(
 }
 
 fn respawn_ball(
-    mut commands: Commands,
     mut balls: Query<(Entity, &mut Transform), (With<Ball>, With<NeedsRespawn>)>,
+    mut commands: Commands,
 ) {
     for (entity, mut transform) in &mut balls {
         transform.translation = Vec3::ZERO;
@@ -296,8 +296,8 @@ fn respawn_ball(
 
 fn wait_ball_launch_timer(
     time: Res<Time>,
-    mut commands: Commands,
     mut balls: Query<(Entity, &mut LaunchTimer), With<Ball>>,
+    mut commands: Commands,
 ) {
     for (entity, mut timer) in &mut balls {
         if timer.tick(time.delta()).just_finished() {
@@ -309,8 +309,8 @@ fn wait_ball_launch_timer(
 
 fn launch_ball(
     mut rng: ResMut<GameRng>,
-    mut commands: Commands,
     mut balls: Query<(Entity, &mut Speed), (With<Ball>, With<NeedsLaunch>)>,
+    mut commands: Commands,
 ) {
     for (entity, mut speed) in &mut balls {
         let dir_x = if rng.random() { 1.0 } else { -1.0 };
@@ -402,11 +402,11 @@ fn ball_movement(
 }
 
 fn check_score(
-    mut commands: Commands,
-    mut game_score: ResMut<GameScore>,
     score_text_query: Query<Entity, With<ScoreText>>,
     respawns: Query<&Transform, With<RespawnBallArea>>,
     balls: Query<(Entity, &Transform), With<Ball>>,
+    mut game_score: ResMut<GameScore>,
+    mut commands: Commands,
 ) {
     for (entity, transform) in &balls {
         let ball_x = transform.translation.x;

@@ -74,10 +74,10 @@ fn setup(mut game_mode: ResMut<GameMode>, mut commands: Commands) {
 
 fn select_option(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut commands: Commands,
+    mode_options: Query<Entity, (With<GameModeOption>, Without<Dirty>)>,
     mut game_mode: ResMut<GameMode>,
     mut next_state: ResMut<NextState<AppState>>,
-    mode_options: Query<Entity, (With<GameModeOption>, Without<Dirty>)>,
+    mut commands: Commands,
 ) {
     if keyboard_input.just_pressed(KeyCode::Enter) {
         next_state.set(AppState::Game);
@@ -103,9 +103,9 @@ fn select_option(
 }
 
 fn update_selection(
-    mut commands: Commands,
     game_mode: ResMut<GameMode>,
     dirty_query: Query<(Entity, &Children, &GameModeOption), With<Dirty>>,
+    mut commands: Commands,
 ) {
     for (entity, children, game_mode_option) in &dirty_query {
         commands.entity(entity).remove::<BackgroundColor>();
