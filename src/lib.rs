@@ -7,7 +7,6 @@ mod debug_plugins;
 mod game;
 mod menu;
 mod select_players;
-mod states;
 
 pub fn run() {
     let mut app = App::new();

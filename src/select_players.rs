@@ -1,4 +1,4 @@
-use crate::{game::GameMode, states::AppState};
+use crate::{app::AppState, game::GameMode};
 use bevy::prelude::*;
 
 #[derive(Debug, Default, Component, Deref, DerefMut, Reflect)]

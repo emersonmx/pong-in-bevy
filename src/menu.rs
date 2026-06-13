@@ -1,4 +1,4 @@
-use crate::states::AppState;
+use crate::app::AppState;
 use bevy::prelude::*;
 
 fn setup(mut commands: Commands) {

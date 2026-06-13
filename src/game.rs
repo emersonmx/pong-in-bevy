@@ -1,4 +1,4 @@
-use crate::states::AppState;
+use crate::app::AppState;
 use bevy::{
     math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume},
     prelude::*,
