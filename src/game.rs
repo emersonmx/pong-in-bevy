@@ -1,4 +1,4 @@
-use crate::app::AppState;
+use crate::app::State;
 use bevy::{
     math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume},
     prelude::*,
@@ -112,7 +112,7 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         Name::new("MiddleLine"),
         Transform::from_xyz(0.0, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, GAME_AREA.size().y)),
-        DespawnOnExit(AppState::Game),
+        DespawnOnExit(State::Game),
     ));
 
     let wall_offset = GAME_AREA.half_size.y;
@@ -121,14 +121,14 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         Wall,
         CollisionPlane(Plane2d::new(Vec2::NEG_Y)),
         Transform::from_xyz(0.0, wall_offset, 0.0),
-        DespawnOnExit(AppState::Game),
+        DespawnOnExit(State::Game),
     ));
     commands.spawn((
         Name::new("BottomWall"),
         Wall,
         CollisionPlane(Plane2d::new(Vec2::Y)),
         Transform::from_xyz(0.0, -wall_offset, 0.0),
-        DespawnOnExit(AppState::Game),
+        DespawnOnExit(State::Game),
     ));
 
     let respawn_offset = GAME_AREA.half_size.x;
@@ -136,13 +136,13 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         Name::new("LeftRespawn"),
         RespawnBallArea,
         Transform::from_xyz(-respawn_offset, 0.0, 0.0),
-        DespawnOnExit(AppState::Game),
+        DespawnOnExit(State::Game),
     ));
     commands.spawn((
         Name::new("RightRespawn"),
         RespawnBallArea,
         Transform::from_xyz(respawn_offset, 0.0, 0.0),
-        DespawnOnExit(AppState::Game),
+        DespawnOnExit(State::Game),
     ));
 
     let paddle_offset = GAME_AREA.half_size.x - 20.0;
@@ -154,7 +154,7 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         CollisionRect(Rectangle::from_size(PADDLE_SIZE)),
         Transform::from_xyz(-paddle_offset, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
-        DespawnOnExit(AppState::Game),
+        DespawnOnExit(State::Game),
     ));
     match *game_mode {
         GameMode::OneVsOne | GameMode::OneVsAI => {
@@ -176,7 +176,7 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         CollisionRect(Rectangle::from_size(PADDLE_SIZE)),
         Transform::from_xyz(paddle_offset, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
-        DespawnOnExit(AppState::Game),
+        DespawnOnExit(State::Game),
     ));
     match *game_mode {
         GameMode::OneVsOne | GameMode::AIVsOne => {
@@ -198,7 +198,7 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         CollisionRect(Rectangle::from_size(BALL_SIZE)),
         Transform::from_xyz(0.0, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, BALL_SIZE),
-        DespawnOnExit(AppState::Game),
+        DespawnOnExit(State::Game),
     ));
 
     commands
@@ -215,7 +215,7 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
                 },
                 ..default()
             },
-            DespawnOnExit(AppState::Game),
+            DespawnOnExit(State::Game),
         ))
         .with_children(|parent| {
             parent.spawn((Name::new("Score"), Text::default(), ScoreText, Dirty));
@@ -450,12 +450,12 @@ impl Plugin for GamePlugin {
         app.init_resource::<GameRng>()
             .init_resource::<GameMode>()
             .init_resource::<GameScore>()
-            .add_systems(OnEnter(AppState::Game), setup)
+            .add_systems(OnEnter(State::Game), setup)
             .add_systems(
                 PreUpdate,
-                (paddle_input, bot_input).run_if(in_state(AppState::Game)),
+                (paddle_input, bot_input).run_if(in_state(State::Game)),
             )
-            .add_systems(Update, update_score_text.run_if(in_state(AppState::Game)))
+            .add_systems(Update, update_score_text.run_if(in_state(State::Game)))
             .add_systems(
                 FixedUpdate,
                 (
@@ -468,7 +468,7 @@ impl Plugin for GamePlugin {
                     update_speed,
                 )
                     .chain()
-                    .run_if(in_state(AppState::Game)),
+                    .run_if(in_state(State::Game)),
             );
     }
 }

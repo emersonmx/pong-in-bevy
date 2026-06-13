@@ -1,8 +1,13 @@
 use crate::{game::GamePlugin, menu::MenuPlugin, select_players::SelectPlayersPlugin};
 use bevy::{prelude::*, window::WindowResolution};
 
+const GAME_TITLE: &str = "PONG";
+const WINDOW_WIDTH: u32 = 800;
+const WINDOW_HEIGHT: u32 = 600;
+const CLEAR_COLOR: Color = Color::BLACK;
+
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
-pub enum AppState {
+pub enum State {
     #[default]
     Menu,
     SelectPlayers,
@@ -17,19 +22,19 @@ pub struct AppPlugin;
 
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(ClearColor(Color::BLACK))
-            .init_state::<AppState>()
-            .add_plugins(DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "PONG".to_string(),
-                    resolution: WindowResolution::new(800, 600),
-                    ..default()
-                }),
+        app.add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: GAME_TITLE.to_string(),
+                resolution: WindowResolution::new(WINDOW_WIDTH, WINDOW_HEIGHT),
                 ..default()
-            }))
-            .add_plugins(MenuPlugin)
-            .add_plugins(SelectPlayersPlugin)
-            .add_plugins(GamePlugin)
-            .add_systems(Startup, setup);
+            }),
+            ..default()
+        }))
+        .add_plugins(MenuPlugin)
+        .add_plugins(SelectPlayersPlugin)
+        .add_plugins(GamePlugin)
+        .insert_resource(ClearColor(CLEAR_COLOR))
+        .init_state::<State>()
+        .add_systems(Startup, setup);
     }
 }
