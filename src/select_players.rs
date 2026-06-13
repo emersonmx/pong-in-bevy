@@ -1,26 +1,14 @@
-use crate::{
-    game::{Game, Mode},
-    states::AppState,
-};
+use crate::{game::GameMode, states::AppState};
 use bevy::prelude::*;
 
-#[derive(Debug, Default, Resource, Reflect)]
-#[reflect(Resource)]
-struct SelectPlayers {
-    options: Vec<Entity>,
-    selected_mode: Mode,
-}
+#[derive(Debug, Default, Component, Deref, DerefMut, Reflect)]
+struct GameModeOption(GameMode);
 
 #[derive(Component, Reflect)]
 struct Dirty;
 
-fn setup(
-    mut game: ResMut<Game>,
-    mut select_players: ResMut<SelectPlayers>,
-    mut commands: Commands,
-) {
-    *game = default();
-    *select_players = default();
+fn setup(mut game_mode: ResMut<GameMode>, mut commands: Commands) {
+    *game_mode = default();
 
     commands
         .spawn((
@@ -61,23 +49,24 @@ fn setup(
                         ..default()
                     };
                     let options = [
-                        ("OneVsOne", "1", "vs", "1"),
-                        ("OneVsAI", "1", "vs", "AI"),
-                        ("AIVsOne", "AI", "vs", "1"),
-                        ("AIVsAI", "AI", "vs", "AI"),
+                        ("OneVsOne", "1", "vs", "1", GameMode::OneVsOne),
+                        ("OneVsAI", "1", "vs", "AI", GameMode::OneVsAI),
+                        ("AIVsOne", "AI", "vs", "1", GameMode::AIVsOne),
+                        ("AIVsAI", "AI", "vs", "AI", GameMode::AIVsAI),
                     ];
 
-                    for (i, &(name, left, middle, right)) in options.iter().enumerate() {
-                        let mut entity = parent.spawn((Name::new(name), layout.clone(), Dirty));
+                    for (name, left, middle, right, mode) in options {
+                        let mut entity = parent.spawn((
+                            Name::new(name),
+                            layout.clone(),
+                            GameModeOption(mode),
+                            Dirty,
+                        ));
                         entity.with_children(|parent| {
                             parent.spawn((item.clone(), Text::new(left)));
                             parent.spawn((item.clone(), Text::new(middle)));
                             parent.spawn((item.clone(), Text::new(right)));
                         });
-                        select_players.options.push(entity.id());
-                        if i == 0 {
-                            select_players.selected_mode = Mode::OneVsOne;
-                        }
                     }
                 });
         });
@@ -86,12 +75,11 @@ fn setup(
 fn select_option(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
-    mut game: ResMut<Game>,
-    mut select_players: ResMut<SelectPlayers>,
+    mut game_mode: ResMut<GameMode>,
     mut next_state: ResMut<NextState<AppState>>,
+    mode_options: Query<Entity, (With<GameModeOption>, Without<Dirty>)>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Enter) {
-        game.mode = select_players.selected_mode.clone();
         next_state.set(AppState::Game);
         return;
     }
@@ -100,35 +88,34 @@ fn select_option(
     let down_pressed = keyboard_input.just_pressed(KeyCode::ArrowDown);
     let is_dirty = up_pressed || down_pressed;
 
-    if select_players.selected_mode == Mode::OneVsOne && up_pressed {
+    if *game_mode == GameMode::OneVsOne && up_pressed {
         return;
     }
 
-    if select_players.selected_mode == Mode::AIVsAI && down_pressed {
+    if *game_mode == GameMode::AIVsAI && down_pressed {
         return;
     }
 
     if up_pressed {
-        select_players.selected_mode = select_players.selected_mode.previous_mode();
+        *game_mode = game_mode.previous_mode();
     }
     if down_pressed {
-        select_players.selected_mode = select_players.selected_mode.next_mode();
+        *game_mode = game_mode.next_mode();
     }
 
     if is_dirty {
-        for entity in &select_players.options {
-            commands.entity(*entity).insert(Dirty);
+        for entity in &mode_options {
+            commands.entity(entity).insert(Dirty);
         }
     }
 }
 
 fn update_selection(
     mut commands: Commands,
-    select_players: ResMut<SelectPlayers>,
-    dirty_query: Query<(Entity, &Children), With<Dirty>>,
+    game_mode: ResMut<GameMode>,
+    dirty_query: Query<(Entity, &Children, &GameModeOption), With<Dirty>>,
 ) {
-    let selected_option = select_players.options[select_players.selected_mode.clone() as usize];
-    for (entity, children) in &dirty_query {
+    for (entity, children, game_mode_option) in &dirty_query {
         commands.entity(entity).remove::<BackgroundColor>();
         commands.entity(entity).remove::<Dirty>();
 
@@ -136,9 +123,9 @@ fn update_selection(
             commands.entity(child).insert(TextColor::from(Color::WHITE));
         }
 
-        if entity == selected_option {
+        if *game_mode == game_mode_option.0 {
             commands
-                .entity(selected_option)
+                .entity(entity)
                 .insert(BackgroundColor::from(Color::WHITE));
             for &child in children {
                 commands.entity(child).insert(TextColor::from(Color::BLACK));
@@ -151,8 +138,7 @@ pub struct SelectPlayersPlugin;
 
 impl Plugin for SelectPlayersPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<SelectPlayers>()
-            .add_systems(OnEnter(AppState::SelectPlayers), setup)
+        app.add_systems(OnEnter(AppState::SelectPlayers), setup)
             .add_systems(
                 PreUpdate,
                 select_option.run_if(in_state(AppState::SelectPlayers)),

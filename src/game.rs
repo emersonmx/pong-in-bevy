@@ -5,8 +5,26 @@ use bevy::{
 };
 use rand::{RngExt, rngs::ChaCha8Rng};
 
-#[derive(Debug, Default, Clone, PartialEq, Reflect)]
-pub enum Mode {
+const GAME_AREA: Rectangle = Rectangle::new(800.0, 600.0);
+const DEFAULT_PADDLE_SPEED: f32 = 300.0;
+const DEFAULT_BALL_SPEED: f32 = 100.0;
+const BALL_SPEED_STEP: f32 = 0.1;
+const BALL_MAX_SPEED: f32 = 1000.0;
+const PADDLE_SIZE: Vec2 = Vec2::new(20.0, 100.0);
+const BALL_SIZE: Vec2 = Vec2::new(10.0, 10.0);
+
+#[derive(Debug, Resource, Deref, DerefMut)]
+struct GameRng(ChaCha8Rng);
+
+impl Default for GameRng {
+    fn default() -> Self {
+        Self(rand::make_rng())
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Resource, Reflect)]
+#[reflect(Resource)]
+pub enum GameMode {
     #[default]
     OneVsOne,
     OneVsAI,
@@ -14,57 +32,29 @@ pub enum Mode {
     AIVsAI,
 }
 
-impl Mode {
+impl GameMode {
     pub fn next_mode(&self) -> Self {
         match self {
-            Mode::OneVsOne => Mode::OneVsAI,
-            Mode::OneVsAI => Mode::AIVsOne,
-            Mode::AIVsOne => Mode::AIVsAI,
-            Mode::AIVsAI => Mode::OneVsOne,
+            Self::OneVsOne => Self::OneVsAI,
+            Self::OneVsAI => Self::AIVsOne,
+            Self::AIVsOne => Self::AIVsAI,
+            Self::AIVsAI => Self::OneVsOne,
         }
     }
 
     pub fn previous_mode(&self) -> Self {
         match self {
-            Mode::OneVsOne => Mode::AIVsAI,
-            Mode::OneVsAI => Mode::OneVsOne,
-            Mode::AIVsOne => Mode::OneVsAI,
-            Mode::AIVsAI => Mode::AIVsOne,
+            Self::OneVsOne => Self::AIVsAI,
+            Self::OneVsAI => Self::OneVsOne,
+            Self::AIVsOne => Self::OneVsAI,
+            Self::AIVsAI => Self::AIVsOne,
         }
     }
 }
 
-#[derive(Debug, Resource, Reflect)]
+#[derive(Debug, Default, Resource, Reflect)]
 #[reflect(Resource)]
-pub struct Game {
-    pub area: Rectangle,
-    pub score: (u32, u32),
-    pub default_paddle_speed: f32,
-    pub default_ball_speed: f32,
-    pub ball_speed_step: f32,
-    pub ball_max_speed: f32,
-    pub mode: Mode,
-}
-
-impl Default for Game {
-    fn default() -> Self {
-        Self {
-            area: Rectangle::new(800.0, 600.0),
-            score: (0, 0),
-            default_paddle_speed: 300.0,
-            default_ball_speed: 100.0,
-            ball_speed_step: 0.1,
-            ball_max_speed: 1000.0,
-            mode: Mode::OneVsAI,
-        }
-    }
-}
-
-#[derive(Debug, Resource, Deref, DerefMut)]
-struct GameRng(ChaCha8Rng);
-
-const PADDLE_SIZE: Vec2 = Vec2::new(20.0, 100.0);
-const BALL_SIZE: Vec2 = Vec2::new(10.0, 10.0);
+pub struct GameScore(u32, u32);
 
 #[derive(Debug, Default, Component, Reflect, Deref, DerefMut)]
 struct Direction(Vec2);
@@ -117,15 +107,15 @@ struct NeedsLaunch;
 #[derive(Component, Reflect)]
 struct Dirty;
 
-fn setup(game: Res<Game>, mut commands: Commands) {
+fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
     commands.spawn((
         Name::new("MiddleLine"),
         Transform::from_xyz(0.0, 0.0, 0.0),
-        Sprite::from_color(Color::WHITE, Vec2::new(1.0, game.area.size().y)),
+        Sprite::from_color(Color::WHITE, Vec2::new(1.0, GAME_AREA.size().y)),
         DespawnOnExit(AppState::Game),
     ));
 
-    let wall_offset = game.area.half_size.y;
+    let wall_offset = GAME_AREA.half_size.y;
     commands.spawn((
         Name::new("TopWall"),
         Wall,
@@ -141,7 +131,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         DespawnOnExit(AppState::Game),
     ));
 
-    let respawn_offset = game.area.half_size.x;
+    let respawn_offset = GAME_AREA.half_size.x;
     commands.spawn((
         Name::new("LeftRespawn"),
         RespawnBallArea,
@@ -155,25 +145,25 @@ fn setup(game: Res<Game>, mut commands: Commands) {
         DespawnOnExit(AppState::Game),
     ));
 
-    let paddle_offset = game.area.half_size.x - 20.0;
+    let paddle_offset = GAME_AREA.half_size.x - 20.0;
     let mut left_paddle = commands.spawn((
         Name::new("LeftPaddle"),
         Paddle,
-        Speed(game.default_paddle_speed),
+        Speed(DEFAULT_PADDLE_SPEED),
         Direction::default(),
         CollisionRect(Rectangle::from_size(PADDLE_SIZE)),
         Transform::from_xyz(-paddle_offset, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
         DespawnOnExit(AppState::Game),
     ));
-    match game.mode {
-        Mode::OneVsOne | Mode::OneVsAI => {
+    match *game_mode {
+        GameMode::OneVsOne | GameMode::OneVsAI => {
             left_paddle.insert(PaddleKeyboardInput {
                 up_key: KeyCode::KeyW,
                 down_key: KeyCode::KeyS,
             });
         }
-        Mode::AIVsOne | Mode::AIVsAI => {
+        GameMode::AIVsOne | GameMode::AIVsAI => {
             left_paddle.insert(Bot);
         }
     }
@@ -181,21 +171,21 @@ fn setup(game: Res<Game>, mut commands: Commands) {
     let mut right_paddle = commands.spawn((
         Name::new("RightPaddle"),
         Paddle,
-        Speed(game.default_paddle_speed),
+        Speed(DEFAULT_PADDLE_SPEED),
         Direction::default(),
         CollisionRect(Rectangle::from_size(PADDLE_SIZE)),
         Transform::from_xyz(paddle_offset, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
         DespawnOnExit(AppState::Game),
     ));
-    match game.mode {
-        Mode::OneVsOne | Mode::AIVsOne => {
+    match *game_mode {
+        GameMode::OneVsOne | GameMode::AIVsOne => {
             right_paddle.insert(PaddleKeyboardInput {
                 up_key: KeyCode::ArrowUp,
                 down_key: KeyCode::ArrowDown,
             });
         }
-        Mode::OneVsAI | Mode::AIVsAI => {
+        GameMode::OneVsAI | GameMode::AIVsAI => {
             right_paddle.insert(Bot);
         }
     }
@@ -203,7 +193,7 @@ fn setup(game: Res<Game>, mut commands: Commands) {
     commands.spawn((
         Name::new("Ball"),
         Ball,
-        Speed(game.default_ball_speed),
+        Speed(DEFAULT_BALL_SPEED),
         NeedsRespawn,
         CollisionRect(Rectangle::from_size(BALL_SIZE)),
         Transform::from_xyz(0.0, 0.0, 0.0),
@@ -278,11 +268,11 @@ fn bot_input(
 }
 
 fn update_score_text(
-    game: Res<Game>,
+    game_score: Res<GameScore>,
     mut commands: Commands,
     mut scores: Query<(Entity, &mut Text), (With<ScoreText>, With<Dirty>)>,
 ) {
-    let score = format!("{}   {}", game.score.0, game.score.1);
+    let score = format!("{}   {}", game_score.0, game_score.1);
     for (entity, mut text) in &mut scores {
         *text = Text::new(&score);
         commands.entity(entity).remove::<Dirty>();
@@ -318,7 +308,6 @@ fn wait_ball_launch_timer(
 }
 
 fn launch_ball(
-    game: Res<Game>,
     mut rng: ResMut<GameRng>,
     mut commands: Commands,
     mut balls: Query<(Entity, &mut Speed), (With<Ball>, With<NeedsLaunch>)>,
@@ -329,7 +318,7 @@ fn launch_ball(
         let new_dir = Vec3::new(dir_x, dir_y, 0.0).normalize();
 
         commands.entity(entity).insert(Velocity(new_dir));
-        speed.0 = game.default_ball_speed;
+        speed.0 = DEFAULT_BALL_SPEED;
         commands.entity(entity).remove::<NeedsLaunch>();
     }
 }
@@ -414,7 +403,7 @@ fn ball_movement(
 
 fn check_score(
     mut commands: Commands,
-    mut game: ResMut<Game>,
+    mut game_score: ResMut<GameScore>,
     score_text_query: Query<Entity, With<ScoreText>>,
     respawns: Query<&Transform, With<RespawnBallArea>>,
     balls: Query<(Entity, &Transform), With<Ball>>,
@@ -431,9 +420,9 @@ fn check_score(
             }
 
             if ball_out_left {
-                game.score.1 += 1;
+                game_score.1 += 1;
             } else if ball_out_right {
-                game.score.0 += 1;
+                game_score.0 += 1;
             }
 
             commands.entity(entity).insert(NeedsRespawn);
@@ -445,11 +434,11 @@ fn check_score(
     }
 }
 
-fn update_speed(game: Res<Game>, mut speeds: Query<&mut Speed>) {
+fn update_speed(mut speeds: Query<&mut Speed>) {
     for mut speed in &mut speeds {
-        speed.0 += game.ball_speed_step;
-        if speed.0 > game.ball_max_speed {
-            speed.0 = game.ball_max_speed;
+        speed.0 += BALL_SPEED_STEP;
+        if speed.0 > BALL_MAX_SPEED {
+            speed.0 = BALL_MAX_SPEED;
         }
     }
 }
@@ -458,8 +447,9 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(GameRng(rand::make_rng()))
-            .init_resource::<Game>()
+        app.init_resource::<GameRng>()
+            .init_resource::<GameMode>()
+            .init_resource::<GameScore>()
             .add_systems(OnEnter(AppState::Game), setup)
             .add_systems(
                 PreUpdate,
