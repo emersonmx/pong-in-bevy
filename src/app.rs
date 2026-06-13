@@ -7,7 +7,7 @@ const WINDOW_HEIGHT: u32 = 600;
 const CLEAR_COLOR: Color = Color::BLACK;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
-pub enum State {
+pub enum AppState {
     #[default]
     Menu,
     SelectPlayers,
@@ -34,7 +34,7 @@ impl Plugin for AppPlugin {
         .add_plugins(SelectPlayersPlugin)
         .add_plugins(GamePlugin)
         .insert_resource(ClearColor(CLEAR_COLOR))
-        .init_state::<State>()
+        .init_state::<AppState>()
         .add_systems(Startup, setup);
     }
 }

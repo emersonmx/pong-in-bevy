@@ -1,4 +1,4 @@
-use crate::app::State;
+use crate::app::AppState;
 use bevy::prelude::*;
 
 fn setup(mut commands: Commands) {
@@ -14,7 +14,7 @@ fn setup(mut commands: Commands) {
             ..default()
         },
         BorderColor::from(Color::WHITE),
-        DespawnOnExit(State::Menu),
+        DespawnOnExit(AppState::Menu),
         children![
             (
                 Name::new("Title"),
@@ -28,10 +28,10 @@ fn setup(mut commands: Commands) {
 
 fn wait_any_key(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut next_state: ResMut<NextState<State>>,
+    mut next_state: ResMut<NextState<AppState>>,
 ) {
     if keyboard_input.get_just_pressed().next().is_some() {
-        next_state.set(State::SelectPlayers);
+        next_state.set(AppState::SelectPlayers);
     }
 }
 
@@ -39,7 +39,7 @@ pub struct MenuPlugin;
 
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(State::Menu), setup)
-            .add_systems(PreUpdate, wait_any_key.run_if(in_state(State::Menu)));
+        app.add_systems(OnEnter(AppState::Menu), setup)
+            .add_systems(PreUpdate, wait_any_key.run_if(in_state(AppState::Menu)));
     }
 }

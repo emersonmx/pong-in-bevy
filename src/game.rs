@@ -1,4 +1,4 @@
-use crate::app::State;
+use crate::app::AppState;
 use bevy::{
     math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume},
     prelude::*,
@@ -12,6 +12,14 @@ const BALL_SPEED_STEP: f32 = 0.1;
 const BALL_MAX_SPEED: f32 = 1000.0;
 const PADDLE_SIZE: Vec2 = Vec2::new(20.0, 100.0);
 const BALL_SIZE: Vec2 = Vec2::new(10.0, 10.0);
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, SubStates)]
+#[source(AppState = AppState::Game)]
+enum GameStatus {
+    #[default]
+    Running,
+    Paused,
+}
 
 #[derive(Debug, Resource, Deref, DerefMut)]
 struct GameRng(ChaCha8Rng);
@@ -112,7 +120,7 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         Name::new("MiddleLine"),
         Transform::from_xyz(0.0, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, Vec2::new(1.0, GAME_AREA.size().y)),
-        DespawnOnExit(State::Game),
+        DespawnOnExit(AppState::Game),
     ));
 
     let wall_offset = GAME_AREA.half_size.y;
@@ -121,14 +129,14 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         Wall,
         CollisionPlane(Plane2d::new(Vec2::NEG_Y)),
         Transform::from_xyz(0.0, wall_offset, 0.0),
-        DespawnOnExit(State::Game),
+        DespawnOnExit(AppState::Game),
     ));
     commands.spawn((
         Name::new("BottomWall"),
         Wall,
         CollisionPlane(Plane2d::new(Vec2::Y)),
         Transform::from_xyz(0.0, -wall_offset, 0.0),
-        DespawnOnExit(State::Game),
+        DespawnOnExit(AppState::Game),
     ));
 
     let respawn_offset = GAME_AREA.half_size.x;
@@ -136,13 +144,13 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         Name::new("LeftRespawn"),
         RespawnBallArea,
         Transform::from_xyz(-respawn_offset, 0.0, 0.0),
-        DespawnOnExit(State::Game),
+        DespawnOnExit(AppState::Game),
     ));
     commands.spawn((
         Name::new("RightRespawn"),
         RespawnBallArea,
         Transform::from_xyz(respawn_offset, 0.0, 0.0),
-        DespawnOnExit(State::Game),
+        DespawnOnExit(AppState::Game),
     ));
 
     let paddle_offset = GAME_AREA.half_size.x - 20.0;
@@ -154,7 +162,7 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         CollisionRect(Rectangle::from_size(PADDLE_SIZE)),
         Transform::from_xyz(-paddle_offset, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
-        DespawnOnExit(State::Game),
+        DespawnOnExit(AppState::Game),
     ));
     match *game_mode {
         GameMode::OneVsOne | GameMode::OneVsAI => {
@@ -176,7 +184,7 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         CollisionRect(Rectangle::from_size(PADDLE_SIZE)),
         Transform::from_xyz(paddle_offset, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, PADDLE_SIZE),
-        DespawnOnExit(State::Game),
+        DespawnOnExit(AppState::Game),
     ));
     match *game_mode {
         GameMode::OneVsOne | GameMode::AIVsOne => {
@@ -198,7 +206,7 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
         CollisionRect(Rectangle::from_size(BALL_SIZE)),
         Transform::from_xyz(0.0, 0.0, 0.0),
         Sprite::from_color(Color::WHITE, BALL_SIZE),
-        DespawnOnExit(State::Game),
+        DespawnOnExit(AppState::Game),
     ));
 
     commands.spawn((
@@ -214,9 +222,31 @@ fn setup(game_mode: Res<GameMode>, mut commands: Commands) {
             },
             ..default()
         },
-        DespawnOnExit(State::Game),
+        DespawnOnExit(AppState::Game),
         children![(Name::new("Score"), Text::default(), ScoreText, Dirty)],
     ));
+}
+
+fn toggle_pause(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    state: Res<State<GameStatus>>,
+    mut next_state: ResMut<NextState<GameStatus>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Escape) {
+        next_state.set(match state.get() {
+            GameStatus::Running => GameStatus::Paused,
+            GameStatus::Paused => GameStatus::Running,
+        });
+    }
+}
+
+fn back_to_menu(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Backspace) {
+        next_state.set(AppState::Menu);
+    }
 }
 
 fn paddle_input(
@@ -447,12 +477,20 @@ impl Plugin for GamePlugin {
         app.init_resource::<GameRng>()
             .init_resource::<GameMode>()
             .init_resource::<GameScore>()
-            .add_systems(OnEnter(State::Game), setup)
+            .add_sub_state::<GameStatus>()
+            .add_systems(OnEnter(AppState::Game), setup)
             .add_systems(
                 PreUpdate,
-                (paddle_input, bot_input).run_if(in_state(State::Game)),
+                (
+                    toggle_pause.run_if(in_state(AppState::Game)),
+                    back_to_menu.run_if(in_state(AppState::Game)),
+                    (paddle_input, bot_input).run_if(in_state(GameStatus::Running)),
+                ),
             )
-            .add_systems(Update, update_score_text.run_if(in_state(State::Game)))
+            .add_systems(
+                Update,
+                update_score_text.run_if(in_state(GameStatus::Running)),
+            )
             .add_systems(
                 FixedUpdate,
                 (
@@ -465,7 +503,7 @@ impl Plugin for GamePlugin {
                     update_speed,
                 )
                     .chain()
-                    .run_if(in_state(State::Game)),
+                    .run_if(in_state(GameStatus::Running)),
             );
     }
 }
