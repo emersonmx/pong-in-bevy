@@ -1,1 +1,1 @@
-# pong-in-bevy
+# pong

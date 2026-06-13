@@ -4275,7 +4275,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pong-in-bevy"
+name = "pong"
 version = "0.1.0"
 dependencies = [
  "anyhow",
