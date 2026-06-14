@@ -1,15 +1,12 @@
 [package]
 name = "pong"
+authors = ["Emerson MX <emersonmx@gmail.com>"]
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 bevy = { version = "0.18", default-features = false, features = ["2d"] }
 bevy-inspector-egui = "0.36"
-# log = { version = "0.4", features = [
-#     "max_level_debug",
-#     "release_max_level_warn",
-# ] }
 rand = { version = "0.10", features = ["chacha"] }
 tracing = { version = "0.1", features = [
     "max_level_debug",
@@ -29,6 +26,9 @@ dev = [
 ]
 dev_native = ["dev", "bevy/file_watcher", "bevy/embedded_watcher"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
+
 [lints.clippy]
 too_many_arguments = "allow"
 type_complexity = "allow"
@@ -47,7 +47,7 @@ debug-assertions = false
 codegen-units = 1
 lto = "thin"
 
-[profile.wasm-release]
+[profile.web-release]
 inherits = "release"
 opt-level = "s"
 strip = "debuginfo"
