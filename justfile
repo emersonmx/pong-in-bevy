@@ -40,10 +40,10 @@ setup:
     fi
 
 build *ARGS:
-    cargo build {{ ARGS }}
+    bevy build {{ ARGS }}
 
 run *ARGS:
-    cargo run {{ ARGS }}
+    bevy run {{ ARGS }}
 
 watch *ARGS:
     bacon {{ ARGS }}
@@ -53,16 +53,16 @@ format *ARGS:
 
 lint *ARGS:
     cargo clippy {{ ARGS }}
-    RUSTC_WRAPPER= bevy_lint --locked --workspace --all-targets --all-features
+    bevy_lint --locked --workspace --all-targets --all-features
 
 lint-fix *ARGS:
     cargo clippy --fix --allow-dirty {{ ARGS }}
-    RUSTC_WRAPPER= bevy_lint --fix --allow-dirty --locked --workspace --all-targets --all-features
+    bevy_lint --fix --allow-dirty --locked --workspace --all-targets --all-features
 
 ci:
     cargo fmt --check
     cargo clippy
-    RUSTC_WRAPPER= bevy_lint --locked --workspace --all-targets --profile ci --all-features
+    bevy_lint --locked --workspace --all-targets --profile ci --all-features
 
 test *ARGS:
     cargo test {{ ARGS }}
