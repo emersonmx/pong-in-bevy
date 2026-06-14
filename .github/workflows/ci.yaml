@@ -11,8 +11,10 @@ concurrency:
     cancel-in-progress: true
 
 env:
+    # Reduce compile time and cache size.
     RUSTFLAGS: -Dwarnings -Zshare-generics=y -Zthreads=0
     RUSTDOCFLAGS: -Dwarnings -Zshare-generics=y -Zthreads=0
+    # Use the same Rust toolchain across jobs so they can share a cache.
     toolchain: nightly-2026-01-22
 
 jobs:
@@ -34,6 +36,7 @@ jobs:
             - name: Check formatting
               run: cargo fmt --all -- --check
 
+    # Check documentation.
     docs:
         name: Docs
         runs-on: ubuntu-latest
@@ -61,6 +64,7 @@ jobs:
             - name: Check documentation
               run: cargo doc --locked --workspace --profile ci --all-features --document-private-items --no-deps
 
+    # Run Clippy lints.
     clippy-lints:
         name: Clippy lints
         runs-on: ubuntu-latest
@@ -89,6 +93,7 @@ jobs:
             - name: Run Clippy lints
               run: cargo clippy --locked --workspace --all-targets --profile ci --all-features
 
+    # Run Bevy lints.
     bevy-lints:
         name: Bevy lints
         runs-on: ubuntu-latest
@@ -117,6 +122,7 @@ jobs:
             - name: Run Bevy lints
               run: bevy_lint --locked --workspace --all-targets --profile ci --all-features
 
+    # Run tests.
     tests:
         name: Tests
         runs-on: ubuntu-latest
@@ -147,6 +153,7 @@ jobs:
             - name: Run tests
               run: cargo test --locked --workspace --all-targets --profile ci --no-fail-fast
 
+    # Check that the web build compiles.
     check-web:
         name: Check web
         runs-on: ubuntu-latest
