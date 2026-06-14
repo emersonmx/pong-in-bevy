@@ -26,6 +26,15 @@ dev = [
 ]
 dev_native = ["dev", "bevy/file_watcher", "bevy/embedded_watcher"]
 
+[package.metadata.bevy_cli.release]
+default-features = false
+
+[package.metadata.bevy_cli.web]
+default-features = false
+
+[package.metadata.bevy_cli.web.dev]
+features = ["dev"]
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
 
@@ -33,6 +42,8 @@ unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
 too_many_arguments = "allow"
 type_complexity = "allow"
 nonstandard_macro_braces = "warn"
+
+[package.metadata.bevy_lint]
 
 [profile.dev]
 opt-level = 1

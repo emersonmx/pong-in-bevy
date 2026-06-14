@@ -1,4 +1,4 @@
-use crate::{app::AppState, game::GameMode};
+use crate::screens::{Screen, game::GameMode};
 use bevy::prelude::*;
 
 #[derive(Debug, Default, Component, Deref, DerefMut, Reflect)]
@@ -20,7 +20,7 @@ fn setup(mut game_mode: ResMut<GameMode>, mut commands: Commands) {
             height: percent(100),
             ..default()
         },
-        DespawnOnExit(AppState::SelectPlayers),
+        DespawnOnExit(Screen::SelectPlayers),
         children![
             (
                 Name::new("Title"),
@@ -78,11 +78,11 @@ fn select_option(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mode_options: Query<Entity, (With<GameModeOption>, Without<Dirty>)>,
     mut game_mode: ResMut<GameMode>,
-    mut next_state: ResMut<NextState<AppState>>,
+    mut next_state: ResMut<NextState<Screen>>,
     mut commands: Commands,
 ) {
     if keyboard_input.just_pressed(KeyCode::Enter) {
-        next_state.set(AppState::Game);
+        next_state.set(Screen::Game);
         return;
     }
 
@@ -128,18 +128,14 @@ fn update_selection(
     }
 }
 
-pub struct SelectPlayersPlugin;
-
-impl Plugin for SelectPlayersPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::SelectPlayers), setup)
-            .add_systems(
-                PreUpdate,
-                select_option.run_if(in_state(AppState::SelectPlayers)),
-            )
-            .add_systems(
-                Update,
-                update_selection.run_if(in_state(AppState::SelectPlayers)),
-            );
-    }
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(OnEnter(Screen::SelectPlayers), setup);
+    app.add_systems(
+        PreUpdate,
+        select_option.run_if(in_state(Screen::SelectPlayers)),
+    );
+    app.add_systems(
+        Update,
+        update_selection.run_if(in_state(Screen::SelectPlayers)),
+    );
 }
