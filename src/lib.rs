@@ -7,7 +7,7 @@ mod menu;
 mod select_players;
 
 #[cfg(debug_assertions)]
-mod debug_plugins;
+mod debug_plugin;
 
 pub fn run() {
     let mut app = App::new();
@@ -15,7 +15,7 @@ pub fn run() {
     app.add_plugins(AppPlugin);
 
     #[cfg(debug_assertions)]
-    app.add_plugins(debug_plugins::DebugPlugins);
+    app.add_plugins(debug_plugin::DebugPlugin);
 
     app.run();
 }

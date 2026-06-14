@@ -1,9 +1,9 @@
 use bevy::{input::common_conditions::input_toggle_active, prelude::*};
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 
-pub struct DebugPlugins;
+pub struct DebugPlugin;
 
-impl Plugin for DebugPlugins {
+impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin::default())
             .add_plugins(
