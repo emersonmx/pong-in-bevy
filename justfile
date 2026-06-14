@@ -4,11 +4,15 @@ setup:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    if ! command -v lefthook &> /dev/null; then
-        echo "lefthook not found, installing..."
-        go install github.com/evilmartians/lefthook/v2@latest
+    if ! command -v bevy &> /dev/null; then
+        echo "bevy not found, installing..."
+        cli_version="cli-v0.1.0-alpha.2"
+        cargo install \
+            --git https://github.com/TheBevyFlock/bevy_cli \
+            --tag "$cli_version" \
+            --locked \
+            bevy_cli
     fi
-    lefthook install
 
     if ! command -v bevy_lint &> /dev/null; then
         echo "bevy_lint not found, installing..."
@@ -23,6 +27,12 @@ setup:
             --locked \
             bevy_lint
     fi
+
+    if ! command -v lefthook &> /dev/null; then
+        echo "lefthook not found, installing..."
+        go install github.com/evilmartians/lefthook/v2@latest
+    fi
+    lefthook install
 
     if ! command -v bacon &> /dev/null; then
         echo "bacon not found, installing..."
