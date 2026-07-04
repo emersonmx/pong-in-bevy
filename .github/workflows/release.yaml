@@ -183,7 +183,7 @@ jobs:
 
                   # Check if building for this platform is enabled.
                   echo 'is_platform_enabled=${{
-                    (matrix.platform == 'web' && (inputs.build_for_web || github.event_name == 'push')) ||
+                    (matrix.platform == 'web' && inputs.build_for_web) ||
                     (matrix.platform == 'linux' && inputs.build_for_linux) ||
                     (matrix.platform == 'windows' && inputs.build_for_windows) ||
                     (matrix.platform == 'macos' && inputs.build_for_macos)
@@ -202,7 +202,7 @@ jobs:
                   targets: ${{ matrix.targets }}
 
             - name: Restore Rust cache
-              if: ${{ env.is_platform_enabled == 'true' && github.event_name == 'push' }}
+              if: ${{ env.is_platform_enabled == 'true' }}
               uses: Swatinem/rust-cache@v2
               with:
                   shared-key: release
@@ -323,7 +323,7 @@ jobs:
     deploy-to-itch:
         runs-on: ubuntu-latest
         needs: build
-        if: ${{ (inputs.deploy_to_itch || github.event_name == 'push') && needs.forward-env.outputs.itch_page != '' }}
+        if: ${{ inputs.deploy_to_itch && needs.forward-env.outputs.itch_page != '' }}
 
         steps:
             - name: Download packages
